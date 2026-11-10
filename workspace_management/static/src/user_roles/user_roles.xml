@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+    <t
+            t-name="workspace_management.UserRolesRenderer"
+            t-inherit="web.ListRenderer"
+            t-inherit-mode="primary"
+    >
+        <xpath expr="//th[@t-else]" position="inside">
+            <span
+                    t-if="column.type === 'workspace_role'"
+                    class="fw-bold"
+                    t-out="column.role.label"
+            />
+        </xpath>
+    </t>
+
+    <t
+            t-name="workspace_management.UserRolesRow"
+            t-inherit="web.ListRenderer.RecordRow"
+            t-inherit-mode="primary"
+    >
+        <xpath
+                expr="//t[@t-foreach='this.getColumns(record)']"
+                position="inside"
+        >
+            <td
+                    t-if="column.type === 'workspace_role'"
+                    class="o_data_cell align-middle o_workspace_role_cell"
+                    t-att-data-column-id="column.id"
+                    t-on-click.stop="() => {}"
+            >
+                <SelectionField
+                        name="'role'"
+                        record="this.roleRecord(record, column.role)"
+                        readonly="this.saving()"
+                        required="true"
+                />
+            </td>
+        </xpath>
+    </t>
+</templates>
