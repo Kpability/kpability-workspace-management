@@ -1,0 +1,42 @@
+<odoo>
+    <record id="crm_won_reason_view_search" model="ir.ui.view">
+        <field name="name">crm.won.reason.search</field>
+        <field name="model">crm.won.reason</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="s_name"/>
+                <field name="stage_ids"/>
+                <filter string="Archived" name="inactive" domain="[('active', '=', False)]"/>
+            </search>
+        </field>
+    </record>
+
+    <record id="crm_won_reason_view_list" model="ir.ui.view">
+        <field name="name">crm.won.reason.list</field>
+        <field name="model">crm.won.reason</field>
+        <field name="arch" type="xml">
+            <list editable="bottom">
+                <field name="s_name"/>
+                <field name="stage_ids" widget="many2many_tags" placeholder="All stages"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="crm_won_reason_action" model="ir.actions.act_window">
+        <field name="name">Won Reasons</field>
+        <field name="res_model">crm.won.reason</field>
+        <field name="view_mode">list</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Create a Won Reason</p>
+            <p>Use Won Reasons to report on why opportunities are won.</p>
+        </field>
+    </record>
+
+    <menuitem
+            id="menu_crm_won_reason"
+            name="Won Reasons"
+            parent="crm.menu_crm_config_lead"
+            action="crm_won_reason_action"
+            sequence="7"
+    />
+</odoo>
