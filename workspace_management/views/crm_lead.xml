@@ -1,0 +1,37 @@
+<odoo>
+    <record id="crm_lead_view_form" model="ir.ui.view">
+        <field name="name">crm.lead.form.workspace</field>
+        <field name="model">crm.lead</field>
+        <field name="inherit_id" ref="crm.crm_lead_view_form"/>
+        <field name="arch" type="xml">
+            <button name="action_set_won_rainbowman" position="attributes">
+                <attribute name="invisible">True</attribute>
+            </button>
+            <button name="action_set_won_rainbowman" position="after">
+                <button
+                        name="%(workspace_management.crm_lead_won_action)d"
+                        string="Won"
+                        type="action"
+                        class="oe_highlight"
+                        data-hotkey="w"
+                        invisible="won_status == 'won' or type == 'lead' or not active"
+                />
+            </button>
+            <field name="lost_reason_id" position="after">
+                <field
+                        name="won_reason_id"
+                        invisible="type == 'lead' or won_status != 'won'"
+                        placeholder="Not specified"
+                />
+                <field
+                        name="s_won_reason_custom"
+                        invisible="type == 'lead' or won_status != 'won' or not s_won_reason_custom"
+                />
+                <field
+                        name="s_lost_reason_custom"
+                        invisible="type == 'lead' or won_status != 'lost' or not s_lost_reason_custom"
+                />
+            </field>
+        </field>
+    </record>
+</odoo>
