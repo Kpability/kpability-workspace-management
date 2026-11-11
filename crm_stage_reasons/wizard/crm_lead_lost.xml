@@ -6,9 +6,14 @@
         <field name="arch" type="xml">
             <field name="lead_ids" position="after">
                 <field name="lead_stage_ids" invisible="1"/>
+                <field name="has_lost_reasons" invisible="1"/>
+                <div class="alert alert-info mb-0" role="alert" invisible="has_lost_reasons">
+                    No Lost Reasons are configured for this stage.
+                    Add them in CRM → Configuration → Lost Reasons.
+                </div>
             </field>
             <field name="lost_reason_id" position="attributes">
-                <attribute name="required">not s_lost_reason_custom</attribute>
+                <attribute name="required">True</attribute>
                 <attribute name="domain">
                     ['|', ('stage_ids', '=', False), ('stage_ids', 'in', lead_stage_ids)]
                 </attribute>
@@ -17,9 +22,7 @@
                 <div class="mt-3">
                     <field
                             name="s_lost_reason_custom"
-                            widget="reason_custom"
-                            placeholder="Or type another reason..."
-                            required="not lost_reason_id"
+                            placeholder="Add more details (optional)..."
                             class="w-100"
                     />
                 </div>

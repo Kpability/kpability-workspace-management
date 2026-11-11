@@ -7,13 +7,21 @@ class CrmLeadWon(models.TransientModel):
 
     lead_id = fields.Many2one("crm.lead", required=True, ondelete="cascade")
     stage_id = fields.Many2one(related="lead_id.stage_id")
-    won_reason_id = fields.Many2one("crm.won.reason", string="Won Reason")
-    s_won_reason_custom = fields.Char("Other Reason")
+    has_won_reasons = fields.Boolean(compute="_compute_has_won_reasons")
+    won_reason_id = fields.Many2one(
+        "crm.won.reason",
+        string="Won Reason",
+        required=True,
+    )
+    s_won_reason_custom = fields.Char("Details")
 
-    @api.onchange("won_reason_id")
-    def _onchange_won_reason_id(self):
-        if self.won_reason_id:
-            self.s_won_reason_custom = False
+    @api.depends("stage_id")
+    def _compute_has_won_reasons(self):
+        for wizard in self:
+            wizard.has_won_reasons = bool(self.env["crm.won.reason"].search_count(
+                ["|", ("stage_ids", "=", False), ("stage_ids", "in", wizard.stage_id.ids)],
+                limit=1,
+            ))
 
     def action_won_reason_apply(self):
         self.ensure_one()

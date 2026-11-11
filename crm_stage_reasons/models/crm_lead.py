@@ -11,5 +11,5 @@ class CrmLead(models.Model):
         ondelete="restrict",
         tracking=True,
     )
-    s_won_reason_custom = fields.Char("Other Won Reason", tracking=True)
-    s_lost_reason_custom = fields.Char("Other Lost Reason", tracking=True)
+    s_won_reason_custom = fields.Char("Won Reason Details", tracking=True)
+    s_lost_reason_custom = fields.Char("Lost Reason Details", tracking=True)
