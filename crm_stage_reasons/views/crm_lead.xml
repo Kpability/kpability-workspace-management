@@ -9,7 +9,7 @@
             </button>
             <button name="action_set_won_rainbowman" position="after">
                 <button
-                        name="%(workspace_management.crm_lead_won_action)d"
+                        name="%(crm_stage_reasons.crm_lead_won_action)d"
                         string="Won"
                         type="action"
                         class="oe_highlight"

@@ -6,20 +6,22 @@
             <form string="Won Lead">
                 <field name="lead_id" invisible="1"/>
                 <field name="stage_id" invisible="1"/>
+                <field name="has_won_reasons" invisible="1"/>
+                <div class="alert alert-info mb-0" role="alert" invisible="has_won_reasons">
+                    No Won Reasons are configured for this stage.
+                    Add them in CRM → Configuration → Won Reasons.
+                </div>
                 <field
                         name="won_reason_id"
                         placeholder="Select a Won Reason..."
                         widget="badges_many2one"
                         options="{'badge_limit': 8}"
                         domain="['|', ('stage_ids', '=', False), ('stage_ids', 'in', [stage_id])]"
-                        required="not s_won_reason_custom"
                 />
                 <div class="mt-3">
                     <field
                             name="s_won_reason_custom"
-                            widget="reason_custom"
-                            placeholder="Or type another reason..."
-                            required="not won_reason_id"
+                            placeholder="Add more details (optional)..."
                             class="w-100"
                     />
                 </div>
