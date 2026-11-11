@@ -1,0 +1,20 @@
+<odoo>
+    <!-- Main menu -->
+    <menuitem
+            id="menu_workspace_management"
+            name="Workspace Management"
+            web_icon="workspace_management,static/description/icon.svg"
+            sequence="30"
+            groups="base.group_system"
+    />
+
+    <!-- User Roles -->
+    <menuitem
+            id="menu_workspace_user_roles"
+            name="User Roles"
+            parent="menu_workspace_management"
+            action="action_open_workspace_user_roles"
+            sequence="10"
+            groups="base.group_system"
+    />
+</odoo>

@@ -1,0 +1,8 @@
+<odoo>
+    <data noupdate="1">
+        <record id="param_workspace_role_scope" model="ir.config_parameter">
+            <field name="key">workspace_management.role_scope</field>
+            <field name="value">Company</field>
+        </record>
+    </data>
+</odoo>
