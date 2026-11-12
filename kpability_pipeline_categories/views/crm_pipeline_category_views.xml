@@ -1,0 +1,164 @@
+<odoo>
+    <record id="crm_pipeline_category_view_list" model="ir.ui.view">
+        <field name="name">crm.pipeline.category.list</field>
+        <field name="model">crm.pipeline.category</field>
+        <field name="arch" type="xml">
+            <list string="Pipeline Categories" decoration-muted="not active">
+                <field name="n_sequence" widget="handle"/>
+                <field name="s_name"/>
+                <field name="lead_count"/>
+                <field name="stage_ids" widget="many2many_tags" optional="show"/>
+                <field name="company_id" optional="show" groups="base.group_multi_company"/>
+                <field name="active" column_invisible="True"/>
+                <button name="action_open_pipeline" type="object" string="Open Pipeline" icon="view_kanban"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="crm_pipeline_category_view_kanban" model="ir.ui.view">
+        <field name="name">crm.pipeline.category.kanban</field>
+        <field name="model">crm.pipeline.category</field>
+        <field name="arch" type="xml">
+            <kanban action="action_open_pipeline" type="object" create="0" group_create="0" sample="1">
+                <field name="s_name"/>
+                <field name="s_description"/>
+                <field name="stage_ids"/>
+                <templates>
+                    <t t-name="card" class="p-3">
+                        <div>
+                            <field name="s_name" class="fw-bold fs-5"/>
+                        </div>
+                        <field name="s_description" class="text-muted mt-1"/>
+                        <div class="mt-2">
+                            <field name="stage_ids" widget="many2many_tags"/>
+                        </div>
+                    </t>
+                </templates>
+            </kanban>
+        </field>
+    </record>
+
+    <record id="crm_pipeline_category_view_form" model="ir.ui.view">
+        <field name="name">crm.pipeline.category.form</field>
+        <field name="model">crm.pipeline.category</field>
+        <field name="arch" type="xml">
+            <form string="Pipeline Category">
+                <header>
+                    <button name="action_open_pipeline" type="object" string="Open Pipeline" class="oe_highlight"/>
+                    <button name="action_open_stage_reorder" type="object" string="Reorder Stages"
+                        groups="sales_team.group_sale_manager"/>
+                </header>
+                <sheet>
+                    <widget name="web_ribbon" title="Archived" bg_color="text-bg-danger" invisible="active"/>
+                    <field name="active" invisible="True"/>
+                    <div class="oe_title">
+                        <label for="s_name"/>
+                        <h1><field name="s_name" placeholder="Category Name"/></h1>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="company_id" placeholder="Shared across companies" options="{'no_create': True}"/>
+                            <field name="n_sequence"/>
+                        </group>
+                        <group>
+                            <field name="s_description" placeholder="What kind of opportunities belong in this pipeline?"/>
+                        </group>
+                    </group>
+                    <separator string="Applicable Stages"/>
+                    <p class="text-muted">
+                        Choose this pipeline's stages. Reordering shared stages affects all pipelines using them.
+                    </p>
+                    <button name="action_open_stage_reorder" type="object" string="Reorder Stages"
+                        icon="fa-arrows-v" class="btn-link" groups="sales_team.group_sale_manager"/>
+                    <field name="stage_ids" nolabel="True" options="{'no_create': True}">
+                        <list default_order="sequence,name,id">
+                            <field name="sequence" readonly="True"/>
+                            <field name="name" readonly="True"/>
+                        </list>
+                    </field>
+                    <notebook groups="sales_team.group_sale_manager">
+                        <page string="Incoming Email Addresses">
+                            <p class="text-muted">
+                                Create opportunities from these addresses, once per pipeline per incoming email.
+                            </p>
+                            <field name="alias_ids">
+                                <list editable="bottom">
+                                    <field name="alias_name" placeholder="enrollment"/>
+                                    <field name="alias_domain_id" options="{'no_create': True}"/>
+                                    <field name="alias_full_name" readonly="True"/>
+                                </list>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="crm_pipeline_category_view_search" model="ir.ui.view">
+        <field name="name">crm.pipeline.category.search</field>
+        <field name="model">crm.pipeline.category</field>
+        <field name="arch" type="xml">
+            <search string="Pipeline Categories">
+                <field name="s_name"/>
+                <field name="stage_ids"/>
+                <field name="company_id"/>
+                <separator/>
+                <filter name="shared" string="Shared" domain="[('company_id', '=', False)]"/>
+                <filter name="archived" string="Archived" domain="[('active', '=', False)]"/>
+                <group>
+                    <filter name="company" string="Company" context="{'group_by': 'company_id'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="crm_pipeline_category_action" model="ir.actions.act_window">
+        <field name="name">Pipeline Categories</field>
+        <field name="res_model">crm.pipeline.category</field>
+        <field name="view_mode">list,form</field>
+        <field name="search_view_id" ref="crm_pipeline_category_view_search"/>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Organize your sales pipelines</p>
+            <p>Create a category, map its CRM stages, then open its pipeline. Leave Company empty for a shared category.</p>
+        </field>
+    </record>
+
+    <record id="crm_pipeline_category_overview_action" model="ir.actions.act_window">
+        <field name="name">Pipelines</field>
+        <field name="res_model">crm.pipeline.category</field>
+        <field name="view_mode">kanban,list,form</field>
+        <field name="search_view_id" ref="crm_pipeline_category_view_search"/>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Open a pipeline</p>
+            <p>Choose a pipeline to see only its opportunities and stages.</p>
+        </field>
+    </record>
+
+    <record id="crm_lead_action_uncategorized" model="ir.actions.act_window">
+        <field name="name">Uncategorized Opportunities</field>
+        <field name="res_model">crm.lead</field>
+        <field name="view_mode">kanban,list,graph,pivot,form,calendar,activity</field>
+        <field name="domain">[('type', '=', 'opportunity'), ('pipeline_category_id', '=', False)]</field>
+        <field name="context">{'default_type': 'opportunity'}</field>
+    </record>
+
+    <record id="crm.menu_crm_opportunities" model="ir.ui.menu">
+        <field name="name">All Opportunities</field>
+        <field name="sequence">2</field>
+    </record>
+
+    <menuitem id="crm_pipeline_category_menu_overview" name="Pipelines"
+        parent="crm.crm_menu_sales" action="crm_pipeline_category_overview_action"
+        sequence="1" groups="sales_team.group_sale_salesman"/>
+    <menuitem id="crm_pipeline_category_menu_uncategorized" name="Uncategorized"
+        parent="crm.crm_menu_sales" action="crm_lead_action_uncategorized"
+        sequence="3" groups="sales_team.group_sale_salesman"/>
+
+    <menuitem id="crm_pipeline_category_menu_config" name="Pipeline Categories"
+        parent="crm.menu_crm_config_lead" action="crm_pipeline_category_action"
+        sequence="2" groups="sales_team.group_sale_manager"/>
+
+    <delete model="ir.ui.menu"
+        search="[('name', '=', 'Pipeline Categories'), ('parent_id', '=', ref('crm.crm_menu_sales'))]"/>
+</odoo>
