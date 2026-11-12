@@ -1,0 +1,18 @@
+<odoo>
+    <record id="crm_pipeline_category_view_form_website" model="ir.ui.view">
+        <field name="name">crm.pipeline.category.form.website</field>
+        <field name="model">crm.pipeline.category</field>
+        <field name="inherit_id" ref="kpability_pipeline_categories.crm_pipeline_category_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//notebook" position="inside">
+                <page string="Websites">
+                    <p class="text-muted">
+                        Select the websites where visitors can choose this pipeline. Only active pipelines
+                        with at least one stage are shown.
+                    </p>
+                    <field name="website_ids" widget="many2many_tags"/>
+                </page>
+            </xpath>
+        </field>
+    </record>
+</odoo>

@@ -1,0 +1,93 @@
+<odoo>
+    <template id="pipeline_category_form" name="CRM Pipeline Form">
+        <section class="s_website_form pt16 pb16" data-vcss="001" data-snippet="s_website_form">
+            <div class="container">
+                <form action="/website/form/crm.lead" method="post" enctype="multipart/form-data"
+                    class="o_mark_required" data-mark="*" data-model_name="crm.lead"
+                    data-success-mode="redirect" data-success-page="/contactus-thank-you">
+                    <div class="s_website_form_rows row s_col_no_bgcolor">
+                        <div class="s_website_form_field mb-3 col-12" data-name="Field" data-type="char">
+                            <div class="row s_col_no_resize s_col_no_bgcolor">
+                                <label class="col-form-label col-sm-auto s_website_form_label" style="width: 200px">
+                                    <span class="s_website_form_label_content">Your Name</span>
+                                    <span class="s_website_form_mark"> *</span>
+                                </label>
+                                <div class="col-sm">
+                                    <input class="form-control s_website_form_input" type="text" name="name"
+                                        required="1" data-fill-with="name"/>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="s_website_form_field mb-3 col-12" data-name="Field" data-type="email">
+                            <div class="row s_col_no_resize s_col_no_bgcolor">
+                                <label class="col-form-label col-sm-auto s_website_form_label" style="width: 200px">
+                                    <span class="s_website_form_label_content">Your Email</span>
+                                    <span class="s_website_form_mark"> *</span>
+                                </label>
+                                <div class="col-sm">
+                                    <input class="form-control s_website_form_input" type="email" name="email_from"
+                                        required="1" data-fill-with="email"/>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="s_website_form_field mb-3 col-12" data-name="Field" data-type="char">
+                            <div class="row s_col_no_resize s_col_no_bgcolor">
+                                <label class="col-form-label col-sm-auto s_website_form_label" style="width: 200px">
+                                    <span class="s_website_form_label_content">Your Company</span>
+                                </label>
+                                <div class="col-sm">
+                                    <input class="form-control s_website_form_input" type="text" name="partner_name"
+                                        data-fill-with="parent_name"/>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="s_website_form_field mb-3 col-12" data-name="Field" data-type="tel">
+                            <div class="row s_col_no_resize s_col_no_bgcolor">
+                                <label class="col-form-label col-sm-auto s_website_form_label" style="width: 200px">
+                                    <span class="s_website_form_label_content">Phone Number</span>
+                                </label>
+                                <div class="col-sm">
+                                    <input class="form-control s_website_form_input" type="tel" name="phone"
+                                        data-fill-with="phone"/>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="s_website_form_field mb-3 col-12" data-name="Field" data-type="text">
+                            <div class="row s_col_no_resize s_col_no_bgcolor">
+                                <label class="col-form-label col-sm-auto s_website_form_label" style="width: 200px">
+                                    <span class="s_website_form_label_content">Your Message</span>
+                                    <span class="s_website_form_mark"> *</span>
+                                </label>
+                                <div class="col-sm">
+                                    <textarea class="form-control s_website_form_input" name="description"
+                                        required="1" rows="3"/>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="s_website_form_field mb-3 col-12" data-name="Field" data-type="char">
+                            <div class="row s_col_no_resize s_col_no_bgcolor">
+                                <label class="col-form-label col-sm-auto s_website_form_label" style="width: 200px">
+                                    <span class="s_website_form_label_content">Which pipeline?</span>
+                                </label>
+                                <div class="col-sm">
+                                    <div class="text-muted small mb-2">
+                                        Choose one or more. Each selected pipeline receives its own opportunity.
+                                    </div>
+                                    <div data-kp-pipeline-categories="1" data-kp-endpoint="/kpability/pipeline-categories">
+                                        <span class="text-muted small">Loading pipelines…</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mb-0 py-2 col-12 s_website_form_submit text-end s_website_form_no_submit_label"
+                            data-name="Submit Button">
+                            <div style="width: 200px;" class="s_website_form_label"/>
+                            <span id="s_website_form_result"/>
+                            <a href="#" role="button" class="btn btn-primary s_website_form_send">Submit</a>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </section>
+    </template>
+</odoo>
