@@ -1,0 +1,9 @@
+<odoo>
+    <record id="action_menu" model="ir.actions.client">
+        <field name="name">Menu</field>
+        <field name="tag">menu_management.Menu</field>
+    </record>
+    <menuitem id="menu_workspace_menu" name="Menu"
+              parent="workspace_management.menu_workspace_management"
+              action="action_menu" sequence="20" groups="base.group_system"/>
+</odoo>
