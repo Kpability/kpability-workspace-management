@@ -22,15 +22,11 @@
             <kanban action="action_open_pipeline" type="object" create="0" group_create="0" sample="1">
                 <field name="s_name"/>
                 <field name="s_description"/>
-                <field name="lead_count"/>
                 <field name="stage_ids"/>
                 <templates>
                     <t t-name="card" class="p-3">
-                        <div class="d-flex justify-content-between align-items-start gap-2">
+                        <div>
                             <field name="s_name" class="fw-bold fs-5"/>
-                            <span class="badge text-bg-light o_kp_lead_count">
-                                <field name="lead_count"/> <span class="text-muted">open</span>
-                            </span>
                         </div>
                         <field name="s_description" class="text-muted mt-1"/>
                         <div class="mt-2">
@@ -57,7 +53,7 @@
                     <field name="active" invisible="True"/>
                     <div class="oe_title">
                         <label for="s_name"/>
-                        <h1><field name="s_name" placeholder="e.g. Enrollment"/></h1>
+                        <h1><field name="s_name" placeholder="Category Name"/></h1>
                     </div>
                     <group>
                         <group>
@@ -70,9 +66,7 @@
                     </group>
                     <separator string="Applicable Stages"/>
                     <p class="text-muted">
-                        Choose the stages this pipeline uses. Stages keep the same order as CRM Stages. Use
-                        Reorder Stages to change that order; a stage shared by several pipelines is reordered
-                        everywhere it is used.
+                        Choose this pipeline's stages. Reordering shared stages affects all pipelines using them.
                     </p>
                     <button name="action_open_stage_reorder" type="object" string="Reorder Stages"
                         icon="fa-arrows-v" class="btn-link" groups="sales_team.group_sale_manager"/>
@@ -85,9 +79,7 @@
                     <notebook groups="sales_team.group_sale_manager">
                         <page string="Incoming Email Addresses">
                             <p class="text-muted">
-                                Add one or more addresses that create opportunities in this pipeline. If one
-                                email is sent to several addresses, a separate opportunity is created for each
-                                pipeline, but not twice in the same pipeline.
+                                Create opportunities from these addresses, once per pipeline per incoming email.
                             </p>
                             <field name="alias_ids">
                                 <list editable="bottom">

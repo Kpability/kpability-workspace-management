@@ -143,6 +143,7 @@ class PipelineCategoryBrowserTests(unittest.TestCase):
     def test_01_category_configuration(self):
         self.open_record("crm.pipeline.category", self.categories[0])
         expect(self.page.locator("[name='s_name'] input")).to_have_value(self.category_name)
+        expect(self.page.locator("[name='s_name'] input")).to_have_attribute("placeholder", "Category Name")
         expect(self.page.locator("[name='stage_ids']")).to_contain_text(f"E2E Qualification {self.run_id}")
         expect(self.page.locator("[name='stage_ids']")).not_to_contain_text(f"E2E Review {self.run_id}")
         expect(self.page.locator("[name='stage_ids'] [name='team_ids']")).to_have_count(0)
@@ -326,7 +327,9 @@ class PipelineCategoryBrowserTests(unittest.TestCase):
         )
         card = self.page.locator(".o_kanban_record").filter(has_text=self.category_name)
         card.wait_for()
-        expect(card.locator(".o_kp_lead_count")).to_contain_text("open")
+        expect(card.locator(".o_kp_lead_count")).to_have_count(0)
+        expect(card.get_by_text("open", exact=True)).to_have_count(0)
+        self.page.screenshot(path=str(self.output / "pipelines-overview.png"), full_page=True)
         card.click()
         columns = self.page.locator(".o_kanban_header .o_column_title")
         expect(columns).to_have_count(3)
@@ -347,6 +350,49 @@ class PipelineCategoryBrowserTests(unittest.TestCase):
         expect(self.page.locator(".o_list_view [name='team_ids']")).to_have_count(0)
         expect(self.page.locator(".o_list_view [name='is_won']")).to_have_count(0)
         expect(self.page.locator(".o_list_view [name='fold']")).to_have_count(0)
+
+    def test_11_public_website_form_creates_selected_pipelines(self):
+        if not self.call("ir.module.module", "search_count", [[
+            ["name", "=", "kpability_website_pipeline_categories"], ["state", "=", "installed"],
+        ]]):
+            self.skipTest("The optional website companion is not installed.")
+        website = self.call("website", "search", [[]], limit=1)[0]
+        self.call("crm.pipeline.category", "write", [self.categories, {"website_ids": [[6, 0, [website]]]}])
+        path = f"/kp-pipeline-form-{self.run_id}"
+        self.call("website.page", "create", [{
+            "name": f"E2E Pipeline Form {self.run_id}", "type": "qweb",
+            "key": f"kpability_website_pipeline_categories.e2e_form_{self.run_id}",
+            "url": path, "website_id": website, "is_published": True,
+            "arch": '<t t-call="website.layout"><div id="wrap">'
+                    '<t t-call="kpability_website_pipeline_categories.pipeline_category_form"/>'
+                    '</div></t>',
+        }])
+        public_context = self.browser.new_context(base_url=self.url, viewport={"width": 1440, "height": 1000})
+        public_page = public_context.new_page()
+        public_page.on("pageerror", lambda error: self.errors.append(str(error)))
+        try:
+            public_page.goto(path, wait_until="domcontentloaded")
+            expect(public_page.locator("body")).to_have_attribute("is-ready", "true")
+            form = public_page.locator(".s_website_form form")
+            form.locator("[name='name']").fill(f"E2E Website Inquiry {self.run_id}")
+            form.locator("[name='email_from']").fill(f"e2e-website-{self.run_id}@example.test")
+            form.locator("[name='description']").fill("Please contact me about both selected pipelines.")
+            for category_id in self.categories:
+                form.locator(f"[name='kp_pipeline_category_id_{category_id}']").check()
+            public_page.screenshot(path=str(self.output / "website-pipeline-selection.png"), full_page=True)
+            with public_page.expect_response(lambda response: "/website/form/crm.lead" in response.url) as submitted:
+                form.locator(".s_website_form_send").click()
+            self.assertEqual(submitted.value.status, 200)
+            expect(public_page).to_have_url(re.compile(r"/contactus-thank-you$"))
+            public_page.screenshot(path=str(self.output / "website-pipeline-success.png"), full_page=True)
+            leads = self.call("crm.lead", "search_read", [[
+                ["name", "=", f"E2E Website Inquiry {self.run_id}"],
+            ]], fields=["pipeline_category_id", "stage_id"])
+            self.assertEqual(len(leads), 2)
+            self.assertEqual({lead["pipeline_category_id"][0] for lead in leads}, set(self.categories))
+            self.assertTrue(all(lead["stage_id"][0] == self.stages[0] for lead in leads))
+        finally:
+            public_context.close()
 
 
 if __name__ == "__main__":

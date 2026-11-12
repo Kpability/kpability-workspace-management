@@ -52,6 +52,9 @@ instead of creating a partial set of opportunities.
 --test-tags=/kpability_website_pipeline_categories
 ```
 
-The test module covers website availability, the public endpoint, and a website
-POST that creates one opportunity in each of two selected pipelines. Browser form
-capture remains part of website UAT.
+The test module covers availability, the public endpoint, native form submission
+configuration, two-pipeline creation, duplicate selections, unavailable-category
+rollback, and attachment contents in every created record. The base add-on's
+optional Playwright case also submits the actual public form, verifies the
+success redirect and checks both persisted opportunities. Staging website UAT
+and external email delivery still require access and gateway configuration.

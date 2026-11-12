@@ -1,5 +1,7 @@
 from ast import literal_eval
+from email.message import EmailMessage
 
+from lxml import etree
 from psycopg2 import IntegrityError
 
 from odoo import Command
@@ -465,6 +467,24 @@ class TestPipelineCategories(TransactionCase):
         self.assertNotIn("is_won", view.arch_db)
         self.assertNotIn("fold", view.arch_db)
 
+    def test_category_form_copy_and_clickable_overview(self):
+        form = etree.fromstring(self.env.ref(
+            "kpability_pipeline_categories.crm_pipeline_category_view_form",
+        ).arch_db)
+        name = form.xpath("//field[@name='s_name']")[0]
+        self.assertEqual(name.get("placeholder"), "Category Name")
+        self.assertIn(
+            "Reordering shared stages affects all pipelines using them.",
+            " ".join(form.xpath("//p")[0].itertext()),
+        )
+        kanban = etree.fromstring(self.env.ref(
+            "kpability_pipeline_categories.crm_pipeline_category_view_kanban",
+        ).arch_db)
+        self.assertEqual(kanban.get("action"), "action_open_pipeline")
+        self.assertEqual(kanban.get("type"), "object")
+        self.assertFalse(kanban.xpath(".//field[@name='lead_count']"))
+        self.assertFalse(kanban.xpath(".//button | .//span[normalize-space(text())='open']"))
+
     def test_category_email_addresses_and_route_deduplication(self):
         domain = self.env["mail.alias.domain"].create({"name": "pc-pipeline.example.test"})
         aliases = self.env["crm.pipeline.category.alias"].create([
@@ -510,3 +530,62 @@ class TestPipelineCategories(TransactionCase):
                 "alias_name": "not-an-address@example.test",
                 "alias_domain_id": domain.id,
             })
+
+    def test_incoming_email_gateway_deduplicates_categories_and_delivery(self):
+        domain = self.env["mail.alias.domain"].create({"name": "pc-gateway.example.test"})
+        aliases = self.env["crm.pipeline.category.alias"].create([
+            {"category_id": self.category_a.id, "alias_name": "intake", "alias_domain_id": domain.id},
+            {"category_id": self.category_a.id, "alias_name": "admissions", "alias_domain_id": domain.id},
+            {"category_id": self.category_shared.id, "alias_name": "renewals", "alias_domain_id": domain.id},
+        ])
+        message = EmailMessage()
+        message["From"] = "PC Gateway Visitor <pc-gateway-visitor@example.test>"
+        message["To"] = ", ".join(aliases.mapped("alias_full_name"))
+        message["Subject"] = "PC Gateway Multiple Pipelines"
+        message["Message-ID"] = "<pc-gateway-multiple-pipelines@example.test>"
+        message.set_content("Please contact me about these services.")
+        message.add_attachment(b"PC gateway attachment", maintype="text", subtype="plain", filename="request.txt")
+        gateway = self.env["mail.thread"].with_context(mail_notify_force_send=False)
+        gateway.message_process(None, message.as_bytes())
+
+        leads = self.Lead.search([("name", "=", message["Subject"])])
+        self.assertEqual(len(leads), 2)
+        self.assertEqual(set(leads.pipeline_category_id.ids), set((self.category_a | self.category_shared).ids))
+        for lead in leads:
+            self.assertEqual(lead.type, "opportunity")
+            self.assertIn(lead.stage_id, lead.pipeline_category_id.stage_ids)
+            if lead.pipeline_category_id.company_id:
+                self.assertEqual(lead.company_id, lead.pipeline_category_id.company_id)
+            attachment = self.env["ir.attachment"].search([
+                ("res_model", "=", "crm.lead"), ("res_id", "=", lead.id), ("name", "=", "request.txt"),
+            ])
+            self.assertEqual(bytes(attachment.raw), b"PC gateway attachment")
+        self.assertFalse(gateway.message_process(None, message.as_bytes()))
+        self.assertEqual(self.Lead.search_count([("name", "=", message["Subject"])]), 2)
+
+    def test_incoming_email_reply_keeps_existing_pipeline_thread(self):
+        domain = self.env["mail.alias.domain"].create({"name": "pc-replies.example.test"})
+        alias = self.env["crm.pipeline.category.alias"].create({
+            "category_id": self.category_shared.id, "alias_name": "intake", "alias_domain_id": domain.id,
+        })
+        message = EmailMessage()
+        message["From"] = "PC Reply Visitor <pc-reply-visitor@example.test>"
+        message["To"] = alias.alias_full_name
+        message["Subject"] = "PC Gateway Reply Thread"
+        message["Message-ID"] = "<pc-gateway-reply-original@example.test>"
+        message.set_content("Initial inquiry.")
+        gateway = self.env["mail.thread"].with_context(mail_notify_force_send=False)
+        lead = gateway.message_process(None, message.as_bytes())
+
+        reply = EmailMessage()
+        reply["From"] = message["From"]
+        reply["To"] = message["To"]
+        reply["Subject"] = "Re: PC Gateway Reply Thread"
+        reply["Message-ID"] = "<pc-gateway-reply-followup@example.test>"
+        reply["In-Reply-To"] = message["Message-ID"]
+        reply["References"] = message["Message-ID"]
+        reply.set_content("A follow-up to the same inquiry.")
+        self.assertEqual(gateway.message_process(None, reply.as_bytes()), lead)
+        self.assertEqual(lead.pipeline_category_id, self.category_shared)
+        self.assertIn(reply["Message-ID"], lead.message_ids.mapped("message_id"))
+        self.assertEqual(self.Lead.search_count([("name", "=", message["Subject"])]), 1)

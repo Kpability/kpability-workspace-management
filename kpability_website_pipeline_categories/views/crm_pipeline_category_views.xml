@@ -7,8 +7,7 @@
             <xpath expr="//notebook" position="inside">
                 <page string="Websites">
                     <p class="text-muted">
-                        Select the websites where visitors can choose this pipeline. Only active pipelines
-                        with at least one stage are shown.
+                        Show this pipeline on selected websites. Requires an active pipeline with stages.
                     </p>
                     <field name="website_ids" widget="many2many_tags"/>
                 </page>

@@ -57,6 +57,8 @@ class WebsitePipelineCategoryForm(WebsiteForm):
         record_ids = getattr(request, "kp_pipeline_created_record_ids", [])
         if model_sudo.model == "crm.lead" and len(record_ids) > 1 and id_record in record_ids:
             for pipeline_record_id in record_ids:
+                for upload in files:
+                    upload.seek(0)
                 super().insert_attachment(model_sudo, pipeline_record_id, files)
             return
         return super().insert_attachment(model_sudo, id_record, files)

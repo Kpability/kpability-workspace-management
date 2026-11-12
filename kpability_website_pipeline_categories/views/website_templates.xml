@@ -2,7 +2,7 @@
     <template id="pipeline_category_form" name="CRM Pipeline Form">
         <section class="s_website_form pt16 pb16" data-vcss="001" data-snippet="s_website_form">
             <div class="container">
-                <form action="/website/form/crm.lead" method="post" enctype="multipart/form-data"
+                <form action="/website/form/" method="post" enctype="multipart/form-data"
                     class="o_mark_required" data-mark="*" data-model_name="crm.lead"
                     data-success-mode="redirect" data-success-page="/contactus-thank-you">
                     <div class="s_website_form_rows row s_col_no_bgcolor">

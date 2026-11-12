@@ -35,8 +35,8 @@ attributed to the PDFs:
   order**, not category-specific ordering. **Reorder Stages** uses the native
   `sequence` handle, scoped to the stages mapped to that category.
 - Both **shared** categories (`company_id=False`) and **company-specific** ones.
-- A Helpdesk-style **Sales → Pipelines** overview with one card per category and
-  a live open-opportunity count. **Open Pipeline** on a card provides a hard
+- A Helpdesk-style **Sales → Pipelines** overview with one clickable card per
+  category, without an Open badge/button. Clicking a card provides a hard
   record filter, mapped stage columns and quick-create default. **All
   Opportunities** and **Uncategorized** remain reachable for native/legacy data.
 - A minimal shared **General Sales** starter category mapped to native New,
@@ -101,7 +101,7 @@ Native findings driving the implementation:
 | `company_id` | Empty means shared; otherwise record company must match |
 | `stage_ids` | Authoritative editable mapping to existing native stages |
 | `s_normalized_name` | Stored canonical-name uniqueness helper; precomputed on insert |
-| `lead_count` | Open-opportunity count for the overview; respects lead ACL/company rules |
+| `lead_count` | Active-opportunity count in the configuration list; respects lead ACL/company rules |
 | `alias_ids` | Optional incoming email addresses for this pipeline |
 | `crm.pipeline.category.alias` | Mapping that owns a native `mail.alias` and its category defaults |
 | `crm.lead.pipeline_category_id` | Optional, indexed, tracked, `check_company=True`, restricted deletion; displayed as **Category** |
@@ -115,9 +115,10 @@ Native stage duplication remains available without copying category mappings.
 sequence-handle list; it does not expose Sales Teams, Is Won or Folded in the
 category workspace.
 
-The **Pipelines** overview is a Kanban of categories. A card's open count uses a
-regular `crm.lead` read-group, so it obeys the current user's record rules and
-company access. Clicking the card runs `action_open_pipeline()`, which returns the
+The **Pipelines** overview is a Kanban of clickable categories without a separate
+Open badge/button. The configuration list retains an opportunity count using a
+regular `crm.lead` read-group, obeying the current user's record rules and company
+access. Clicking a card runs `action_open_pipeline()`, which returns the
 native CRM board action with a hard category domain and category-scoped stage
 columns. Configuration remains in **CRM → Configuration → Pipeline → Pipeline
 Categories**; the former Sales configuration duplicate is removed on upgrade.
@@ -127,6 +128,9 @@ Categories**; the former Sales configuration duplicate is removed on upgrade.
 to the same pipeline. `mail.thread.message_route` is extended to suppress two
 routes that resolve to the same category for one incoming message; routes to
 different categories are preserved.
+Native `crm.lead.message_new()` receives the category's current company for a
+company-specific pipeline when no company was explicitly supplied. Native
+reply threading and repeated Message-ID suppression remain in place.
 
 Sales users read permitted categories; Sales Managers configure them. A global
 company rule allows shared categories and selected allowed companies. Shared
@@ -228,7 +232,7 @@ ODOO_E2E_ALLOW_WRITES=1 \
 ODOO_E2E_URL=http://127.0.0.1:18020 \
 ODOO_E2E_DATABASE=kpability_pipeline_dev \
 ODOO_E2E_LOGIN=admin ODOO_E2E_PASSWORD="$ODOO_BROWSER_PASSWORD" \
-  /tmp/opencode/kpability-browser-venv/bin/python \
+  uv run --with playwright==1.65.0 python \
     kpability_pipeline_categories/tests/e2e/test_pipeline_categories.py
 ```
 
@@ -239,25 +243,27 @@ dataset for inspection; never use client data. Screenshots, named videos and
 `dataset.json` go under `/tmp/opencode/kpability-pipeline-e2e/<run_id>/` (override
 the base directory with `ODOO_E2E_ARTIFACTS`). Do not run concurrent suites on the
 same database.
+When the website companion is installed, the browser suite also creates a
+synthetic published form page and submits it as a public visitor to two pipelines.
 
 ## 6. Executed results, November 12, 2026
 
 | Check | Actual result / evidence |
 | --- | --- |
-| Fresh Enterprise install of both add-ons | **45 passed** (43 feature tests + 2 native web post-tests), zero failures/errors; `/tmp/opencode/kpability-pipeline-final-fresh.log` |
-| Module update on the installed test database | **43 passed**, zero failures/errors; `/tmp/opencode/kpability-pipeline-final-tests.log` |
+| Fresh Enterprise install of both add-ons | **52 passed** (50 feature tests + 2 native web post-tests), zero failures/errors; `/tmp/opencode/kpability-pipeline-leader-followup-fresh.log` |
+| Module update on the installed test database | **50 passed**, zero failures/errors; `/tmp/opencode/kpability-pipeline-leader-followup-tests-final.log` |
 | Existing native data, initial add-on install | Earlier run: three open/Won/Lost opportunities retained exact name, active, stage, team, company, probability and revenue; all remained unclassified |
 | Same-version module update | Earlier run: the three legacy records, one categorized record and its stage mappings retained exact snapshots; Enterprise installed without `workspace_management` |
-| Browser | **10 passed**; configuration, overview card to scoped board, simplified stage reorder, exact scoped columns/reload, explicit Save/Discard, invalid save/RPC, real sales-user read-only access, quick-create, invalid mouse drag, native group-by |
+| Browser | **11 passed**; configuration/placeholder, overview without Open badge, scoped board/reload, simplified stage reorder, explicit Save/Discard, invalid save/RPC, sales-user read-only access, quick-create, invalid mouse drag, group-by, and public website selection creating two opportunities |
 
-The browser run used `kpability_pipeline_final_test` on loopback port 18021
-(run `1112040040`, **15.100s**). Screenshots and videos are in
-`/tmp/opencode/kpability-pipeline-e2e-final/1112040040/`. A later rerun on the
-freshly installed database after the starter-hook and website-controller changes
-also passed **10/10** (run `1112040448`, **14.905s**; artifacts in
-`/tmp/opencode/kpability-pipeline-e2e/1112040448/`). The suite verifies persisted
-values through actual RPC as well as the visible interface and fails on unexpected
-JavaScript page errors.
+The latest browser run used `kpability_pipeline_final_test` on loopback port
+18021 (run `1112075041`, **16.613s**); artifacts are in
+`/tmp/opencode/kpability-pipeline-e2e/1112075041/`. The fresh install used the
+separate disposable database `kpability_pipeline_followup_fresh` on port 18022.
+Earlier runs `1112040040` and `1112040448` passed the original ten browser cases;
+their evidence is historical. The suite verifies persisted values through actual
+RPC as well as the visible interface and fails on unexpected JavaScript page
+errors.
 
 Lifecycle logs from the earlier native-data checks remain
 `/tmp/opencode/kpability-pipeline-upgrade-install.log` and
@@ -278,14 +284,14 @@ latest fresh-install and update runs above use disposable databases.
 | PC-09 | Standalone fresh Enterprise install; native lead conversion/duplication and unclassified behavior | Leads disabled/enabled settings UI rehearsal |
 | PC-10 | Legacy install/update snapshots; hidden/archived mapping and scope-edit rejection | Checker configuration-removal UI check |
 | PC-11 | Second company/dataset reuse test, without code edits | Optional team-consumer co-installation and reuse recording |
-| PC-12 | Overview starter/defaults/counts/ACL; browser card opens the scoped board | Checker reproduction on client data |
-| PC-13 | Email alias defaults, rename/unlink, duplicate-route suppression and Sales ACL ORM tests | Inbound gateway rehearsal on staging |
-| PC-14 | Website availability, public endpoint and two-pipeline website POST tests | Website UAT and browser form capture |
+| PC-12 | Starter/defaults/list counts/ACL; browser overview has no Open badge and card opens the scoped board | Checker reproduction on client data |
+| PC-13 | Alias CRUD/ACL plus native incoming-mail processing: three addresses produce two pipelines, correct company/stages, attachments, repeat delivery suppression and reply threading | Real inbound gateway rehearsal on staging |
+| PC-14 | Availability/endpoint, duplicate selection, unavailable-category rollback, attachment contents in both records; public browser form selects two pipelines, redirects successfully and persists both records | Website UAT on designated staging site |
 | PC-15 | Browser Reorder Stages opens one business-facing list; no Sales Teams, Is Won or Folded columns | Checker reproduction with a reused native stage |
 
 Additional ORM coverage includes native Lost/restore/rainbowman, per-category/team
 bulk Won, missing Won preflight, merge conflicts/preservation, a 50-record batch
-fixture, incoming alias route deduplication and website category creation. The
+fixture, native incoming email processing and website category creation. The
 batch fixture is **not** a production performance benchmark.
 Native stages have no archive flag, so no invented stage-archive case is claimed.
 Curated [visual evidence](evidence/README.md) is retained in
@@ -301,10 +307,18 @@ release-complete: the remaining column and independent review still apply.
    or conflict resolution was attempted here.
 3. Agree production-scale data/performance thresholds and profile accordingly.
 4. When authorized, test the exact published commit on the designated Odoo.sh
-   development/staging branch. Publishing the feature PR does not approve a merge
-   or client deployment; Odoo.sh validation remains unverified.
+    development/staging branch. Publishing the feature PR does not approve a merge
+    or client deployment; Odoo.sh validation remains unverified.
 5. Inventory client-native/custom stage usage before rollout. Do not infer or
    automatically backfill categories; obtain approval for explicit mappings.
 6. Back up the matching database, filestore and code pair before release. Use a
    tested matching restore for rollback, not a code-only checkout after schema
-   changes. Production approval is separate from this local implementation.
+    changes. Production approval is separate from this local implementation.
+
+For the leader's follow-up, the supplied
+[development CRM URL](https://kpability-kpability-workspace-management-feature-pi-41756670.dev.odoo.com/odoo/action-272)
+redirected to login. The public `/kpability/pipeline-categories` endpoint returned
+`[]`. No remote form submission, configuration change or email was attempted;
+staging testing needs an authorized test account, website-enabled categories and
+a usable incoming email address/gateway. Local native-mail tests do not validate
+external mail delivery.
