@@ -8,7 +8,7 @@ class CrmLead(models.Model):
 
     pipeline_category_id = fields.Many2one(
         "crm.pipeline.category",
-        string="Pipeline Category",
+        string="Category",
         index=True,
         tracking=True,
         ondelete="restrict",

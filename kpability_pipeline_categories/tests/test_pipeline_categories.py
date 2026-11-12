@@ -430,3 +430,83 @@ class TestPipelineCategories(TransactionCase):
             )._read_group_stage_ids(self.Stage, [])
         with self.assertRaises(UserError):
             self.Lead.with_context(pipeline_category_scope_id=-1)._read_group_stage_ids(self.Stage, [])
+
+    def test_overview_defaults_and_navigation(self):
+        starter = self.Category.search([
+            ("s_name", "=", "General Sales"), ("company_id", "=", False),
+        ], limit=1)
+        self.assertTrue(starter)
+        self.assertFalse(starter.company_id)
+        self.assertEqual(
+            starter.stage_ids,
+            self.env.ref("crm.stage_lead1") | self.env.ref("crm.stage_lead2")
+            | self.env.ref("crm.stage_lead3") | self.env.ref("crm.stage_lead4"),
+        )
+        self.assertEqual(self.Lead._fields["pipeline_category_id"].string, "Category")
+        self.assertEqual(self.env.ref("crm.menu_crm_opportunities").name, "All Opportunities")
+        self.assertTrue(self.env.ref("kpability_pipeline_categories.crm_pipeline_category_menu_overview"))
+        self.assertFalse(self.env.ref(
+            "kpability_pipeline_categories.crm_pipeline_category_menu_sales",
+            raise_if_not_found=False,
+        ))
+        lead = self._lead(starter)
+        self.assertGreaterEqual(starter.lead_count, 1)
+        self.assertIn(lead, self.Lead.search([("pipeline_category_id", "=", starter.id)]))
+
+    def test_stage_reorder_action_and_simplified_stage_list(self):
+        action = self.category_a.action_open_stage_reorder()
+        self.assertEqual(action["domain"], [("id", "in", self.category_a.stage_ids.ids)])
+        self.assertEqual(action["view_mode"], "list")
+        self.assertEqual(action["views"][0][1], "list")
+        view = self.env.ref("kpability_pipeline_categories.crm_stage_view_list_reorder")
+        self.assertIn("sequence", view.arch_db)
+        self.assertIn('widget="handle"', view.arch_db)
+        self.assertNotIn("team_ids", view.arch_db)
+        self.assertNotIn("is_won", view.arch_db)
+        self.assertNotIn("fold", view.arch_db)
+
+    def test_category_email_addresses_and_route_deduplication(self):
+        domain = self.env["mail.alias.domain"].create({"name": "pc-pipeline.example.test"})
+        aliases = self.env["crm.pipeline.category.alias"].create([
+            {"category_id": self.category_a.id, "alias_name": "pc-enrollment-a1", "alias_domain_id": domain.id},
+            {"category_id": self.category_a.id, "alias_name": "pc-enrollment-a2", "alias_domain_id": domain.id},
+            {"category_id": self.category_shared.id, "alias_name": "pc-renewals", "alias_domain_id": domain.id},
+        ])
+        self.assertEqual(aliases[0].alias_id.alias_model_id.model, "crm.lead")
+        defaults = literal_eval(aliases[0].alias_id.alias_defaults)
+        self.assertEqual(defaults["pipeline_category_id"], self.category_a.id)
+        self.assertEqual(defaults["type"], "opportunity")
+        routes = [
+            ("crm.lead", False, {"pipeline_category_id": self.category_a.id}, self.env.uid, alias.alias_id)
+            for alias in aliases[:2]
+        ]
+        routes.append((
+            "crm.lead", False, {"pipeline_category_id": self.category_shared.id},
+            self.env.uid, aliases[2].alias_id,
+        ))
+        deduplicated = self.env["mail.thread"]._deduplicate_pipeline_category_routes(routes)
+        self.assertEqual(len(deduplicated), 2)
+        self.assertEqual(
+            {route[2]["pipeline_category_id"] for route in deduplicated},
+            {self.category_a.id, self.category_shared.id},
+        )
+        aliases[0].write({"alias_name": "pc-enrollment-renamed"})
+        self.assertEqual(aliases[0].alias_id.alias_name, "pc-enrollment-renamed")
+        alias_id = aliases[0].alias_id
+        aliases[0].unlink()
+        self.assertFalse(alias_id.exists())
+        with self.assertRaises(AccessError):
+            self.env["crm.pipeline.category.alias"].with_user(self.sales).create({
+                "category_id": self.category_shared.id,
+                "alias_name": "pc-sales-denied",
+                "alias_domain_id": domain.id,
+            })
+
+    def test_category_email_address_validation(self):
+        domain = self.env["mail.alias.domain"].create({"name": "pc-pipeline-validation.example.test"})
+        with self.assertRaises(ValidationError):
+            self.env["crm.pipeline.category.alias"].create({
+                "category_id": self.category_a.id,
+                "alias_name": "not-an-address@example.test",
+                "alias_domain_id": domain.id,
+            })

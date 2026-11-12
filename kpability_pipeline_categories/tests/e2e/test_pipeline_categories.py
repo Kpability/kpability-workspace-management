@@ -145,6 +145,9 @@ class PipelineCategoryBrowserTests(unittest.TestCase):
         expect(self.page.locator("[name='s_name'] input")).to_have_value(self.category_name)
         expect(self.page.locator("[name='stage_ids']")).to_contain_text(f"E2E Qualification {self.run_id}")
         expect(self.page.locator("[name='stage_ids']")).not_to_contain_text(f"E2E Review {self.run_id}")
+        expect(self.page.locator("[name='stage_ids'] [name='team_ids']")).to_have_count(0)
+        expect(self.page.locator("[name='stage_ids'] [name='is_won']")).to_have_count(0)
+        expect(self.page.locator("[name='stage_ids'] [name='fold']")).to_have_count(0)
 
     def test_02_scoped_board_columns_and_reload(self):
         self.open_record("crm.pipeline.category", self.categories[0])
@@ -311,10 +314,39 @@ class PipelineCategoryBrowserTests(unittest.TestCase):
     def test_08_native_group_by_category(self):
         self.page.goto("/odoo/crm", wait_until="domcontentloaded")
         self.page.locator(".o_searchview_dropdown_toggler").click()
-        self.page.get_by_role("menuitemcheckbox", name="Pipeline Category", exact=True).click()
+        self.page.get_by_role("menuitemcheckbox", name="Category", exact=True).click()
         columns = self.page.locator(".o_kanban_header .o_column_title")
         expect(columns.filter(has_text=self.category_name)).to_have_count(1)
         expect(columns.filter(has_text=self.renewal_name)).to_have_count(1)
+
+    def test_09_overview_card_opens_scoped_board(self):
+        self.page.goto(
+            "/odoo/action-kpability_pipeline_categories.crm_pipeline_category_overview_action",
+            wait_until="domcontentloaded",
+        )
+        card = self.page.locator(".o_kanban_record").filter(has_text=self.category_name)
+        card.wait_for()
+        expect(card.locator(".o_kp_lead_count")).to_contain_text("open")
+        card.click()
+        columns = self.page.locator(".o_kanban_header .o_column_title")
+        expect(columns).to_have_count(3)
+        expect(self.page.locator(".o_kanban_renderer")).to_contain_text(self.lead_name)
+        expect(self.page.locator(".o_kanban_renderer")).not_to_contain_text(
+            f"E2E Renewal Deal {self.run_id}"
+        )
+
+    def test_10_reorder_stages_ui_is_business_facing(self):
+        self.open_record("crm.pipeline.category", self.categories[0])
+        self.page.get_by_role("button", name="Reorder Stages", exact=True).click()
+        expect(self.page).to_have_url(re.compile(r"/crm\.stage$"))
+        expect(self.page.locator(".o_list_view")).to_have_count(1)
+        for stage_name in ("Intake", "Qualification", "Won"):
+            expect(self.page.locator(".o_list_view")).to_contain_text(
+                f"E2E {stage_name} {self.run_id}"
+            )
+        expect(self.page.locator(".o_list_view [name='team_ids']")).to_have_count(0)
+        expect(self.page.locator(".o_list_view [name='is_won']")).to_have_count(0)
+        expect(self.page.locator(".o_list_view [name='fold']")).to_have_count(0)
 
 
 if __name__ == "__main__":

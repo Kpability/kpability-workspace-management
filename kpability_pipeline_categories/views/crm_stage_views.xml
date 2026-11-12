@@ -1,4 +1,15 @@
 <odoo>
+    <record id="crm_stage_view_list_reorder" model="ir.ui.view">
+        <field name="name">crm.stage.list.pipeline.reorder</field>
+        <field name="model">crm.stage</field>
+        <field name="arch" type="xml">
+            <list string="Pipeline Stages" create="0">
+                <field name="sequence" widget="handle"/>
+                <field name="name" readonly="True"/>
+            </list>
+        </field>
+    </record>
+
     <record id="crm_stage_view_form_pipeline_category" model="ir.ui.view">
         <field name="name">crm.stage.form.pipeline.category</field>
         <field name="model">crm.stage</field>

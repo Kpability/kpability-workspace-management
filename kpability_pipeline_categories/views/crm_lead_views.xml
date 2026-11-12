@@ -61,7 +61,7 @@
                 <field name="pipeline_category_id" context="{'active_test': False}"/>
             </field>
             <filter name="saleschannel" position="after">
-                <filter name="pipeline_category" string="Pipeline Category" context="{'group_by': 'pipeline_category_id'}"/>
+                <filter name="pipeline_category" string="Category" context="{'group_by': 'pipeline_category_id'}"/>
             </filter>
         </field>
     </record>
@@ -75,7 +75,7 @@
                 <field name="pipeline_category_id" context="{'active_test': False}"/>
             </field>
             <filter name="saleschannel" position="after">
-                <filter name="pipeline_category" string="Pipeline Category" context="{'group_by': 'pipeline_category_id'}"/>
+                <filter name="pipeline_category" string="Category" context="{'group_by': 'pipeline_category_id'}"/>
             </filter>
         </field>
     </record>

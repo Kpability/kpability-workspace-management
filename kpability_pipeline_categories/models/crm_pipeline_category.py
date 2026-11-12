@@ -31,7 +31,13 @@ class CrmPipelineCategory(models.Model):
         string="Stages",
         help="Only these stages can be used by categorized records. Native sales-team restrictions still apply.",
     )
-    s_normalized_name = fields.Char(compute="_compute_normalized_name", store=True)
+    s_normalized_name = fields.Char(compute="_compute_normalized_name", store=True, precompute=True)
+    lead_count = fields.Integer(compute="_compute_lead_count")
+    alias_ids = fields.One2many(
+        "crm.pipeline.category.alias",
+        "category_id",
+        string="Incoming Email Addresses",
+    )
 
     _name_scope_unique = models.Constraint(
         "UNIQUE NULLS NOT DISTINCT (company_id, s_normalized_name)",
@@ -49,6 +55,16 @@ class CrmPipelineCategory(models.Model):
         for category in self:
             if not (category.s_name or "").strip():
                 raise ValidationError(_("Enter a non-empty pipeline category name."))
+
+    @api.depends("stage_ids")
+    def _compute_lead_count(self):
+        counts = dict(self.env["crm.lead"]._read_group(
+            [("pipeline_category_id", "in", self.ids), ("type", "=", "opportunity")],
+            ["pipeline_category_id"],
+            ["__count"],
+        ))
+        for category in self:
+            category.lead_count = counts.get(category, 0)
 
     def _check_assignable(self):
         """Shared assignment contract for CRM and optional category consumers."""
@@ -105,6 +121,23 @@ class CrmPipelineCategory(models.Model):
             "context": context,
         })
         # Do not reload the unscoped CRM action when restoring this dynamic action.
+        action.pop("id", None)
+        action.pop("path", None)
+        return action
+
+    def action_open_stage_reorder(self):
+        self.ensure_one()
+        self.check_access("read")
+        if not self.stage_ids:
+            raise UserError(_("Configure at least one stage before reordering this pipeline."))
+        action = self.env["ir.actions.actions"]._for_xml_id("crm.crm_stage_action")
+        action.update({
+            "name": _("Reorder Stages: %(category)s", category=self.display_name),
+            "domain": [("id", "in", self.stage_ids.ids)],
+            "context": {"create": False},
+            "views": [(self.env.ref("kpability_pipeline_categories.crm_stage_view_list_reorder").id, "list")],
+            "view_mode": "list",
+        })
         action.pop("id", None)
         action.pop("path", None)
         return action

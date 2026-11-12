@@ -2,3 +2,5 @@ id,name,model_id,group_id/id,operation,domain
 pipeline_category_sales_read,Pipeline categories sales read,crm.pipeline.category,sales_team.group_sale_salesman,r,
 pipeline_category_manager,Pipeline categories manager,crm.pipeline.category,sales_team.group_sale_manager,crud,
 pipeline_category_company,Pipeline categories multi-company,crm.pipeline.category,,crud,"[('company_id', 'in', company_ids + [False])]"
+pipeline_category_alias_manager,Pipeline category email addresses,crm.pipeline.category.alias,sales_team.group_sale_manager,crud
+pipeline_category_alias_company,Pipeline category email addresses multi-company,crm.pipeline.category.alias,,crud,"[('company_id', 'in', company_ids + [False])]"

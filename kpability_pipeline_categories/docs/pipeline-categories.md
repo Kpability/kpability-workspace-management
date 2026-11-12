@@ -3,11 +3,11 @@
 | Item | Recorded baseline |
 | --- | --- |
 | Branch / add-on | `feature/pipeline-categories` / `kpability_pipeline_categories` |
-| Version / license | `20.0.1.0.0` / LGPL-3 |
+| Version / license | `20.0.1.1.0` / LGPL-3 |
 | Owner / checker | Fyke / independent checker to confirm with Sir Roy |
 | Source delivery target | November 13, 2026 (S1 p.1), not a release approval |
-| Status | Implemented and locally tested November 11, 2026; integration/review gates remain |
-| Publication | Feature PR authorized after local validation based on `603e6a6331a5da81f28ce98b81c93488a054683a`; Odoo.sh/client validation remains pending |
+| Status | Implemented; locally tested November 12, 2026; integration/review gates remain |
+| Publication | Stacked on PR [#4](https://github.com/Kpability/kpability-workspace-management/pull/4) after local validation; Odoo.sh/client validation remains pending |
 
 This replaces the earlier proposal. Read [shared standards](../../docs/development/shared-standards.md)
 for S1–S4/U1, ownership, security, evidence and release requirements, and the
@@ -32,13 +32,26 @@ attributed to the PDFs:
 - **One optional category** per lead/opportunity; no silent backfill or mandatory
   selection. Existing unclassified records retain native CRM behavior.
 - **Reusable stages** through a many-to-many mapping, with native **global stage
-  order**, not category-specific ordering.
+  order**, not category-specific ordering. **Reorder Stages** uses the native
+  `sequence` handle, scoped to the stages mapped to that category.
 - Both **shared** categories (`company_id=False`) and **company-specific** ones.
-- **Open Pipeline** on a category provides a hard record filter, mapped stage
-  columns and quick-create default. The main pipeline stays a mixed overview;
-  an ordinary category search filter does not promise filtered empty columns.
+- A Helpdesk-style **Sales → Pipelines** overview with one card per category and
+  a live open-opportunity count. **Open Pipeline** on a card provides a hard
+  record filter, mapped stage columns and quick-create default. **All
+  Opportunities** and **Uncategorized** remain reachable for native/legacy data.
+- A minimal shared **General Sales** starter category mapped to native New,
+  Qualified, Proposition and Won. Installation does not backfill records.
+- Category configuration lives under **CRM → Configuration → Pipeline →
+  Pipeline Categories** for Sales Managers. Sales users get read-only category
+  access and the operational overview.
+- Simplified category stage UI hides Sales Teams, Is Won and Folded; those native
+  fields and semantics are retained on the native stage views/actions.
+- Optional `kpability_website_pipeline_categories` lets a website visitor select
+  one or more available pipelines; one submission creates one opportunity per
+  selected pipeline. Incoming email aliases can route one or more addresses into
+  each pipeline, with duplicate suppression inside a single pipeline.
 - Local **Odoo 20 Enterprise** development/testing, then authorized Odoo.sh
-  integration/UAT. No push or deployment is implied by local implementation.
+  integration/UAT. No deployment is implied by local implementation.
 
 Team/category mapping, stage rules, dependent dropdown engines, territory,
 reasons, activity templates, company RBAC and global Save/Discard remain out of
@@ -87,14 +100,33 @@ Native findings driving the implementation:
 | `s_name`, `s_description`, `n_sequence`, `active` | Translatable label/description, category ordering and archive state |
 | `company_id` | Empty means shared; otherwise record company must match |
 | `stage_ids` | Authoritative editable mapping to existing native stages |
-| `s_normalized_name` | Stored canonical-name uniqueness helper |
-| `crm.lead.pipeline_category_id` | Optional, indexed, tracked, `check_company=True`, restricted deletion |
+| `s_normalized_name` | Stored canonical-name uniqueness helper; precomputed on insert |
+| `lead_count` | Open-opportunity count for the overview; respects lead ACL/company rules |
+| `alias_ids` | Optional incoming email addresses for this pipeline |
+| `crm.pipeline.category.alias` | Mapping that owns a native `mail.alias` and its category defaults |
+| `crm.lead.pipeline_category_id` | Optional, indexed, tracked, `check_company=True`, restricted deletion; displayed as **Category** |
 | `crm.lead.pipeline_category_stage_ids` | Related stage set used by native field domains |
 | `crm.stage.pipeline_category_ids` | Read-only inverse using the same relation table |
 
 Mappings are edited **only on categories**, including through RPC. This avoids a
 stage form replacing mappings belonging to companies the editor cannot see.
 Native stage duplication remains available without copying category mappings.
+**Reorder Stages** opens only the mapped stages in the native `crm.stage`
+sequence-handle list; it does not expose Sales Teams, Is Won or Folded in the
+category workspace.
+
+The **Pipelines** overview is a Kanban of categories. A card's open count uses a
+regular `crm.lead` read-group, so it obeys the current user's record rules and
+company access. Clicking the card runs `action_open_pipeline()`, which returns the
+native CRM board action with a hard category domain and category-scoped stage
+columns. Configuration remains in **CRM → Configuration → Pipeline → Pipeline
+Categories**; the former Sales configuration duplicate is removed on upgrade.
+
+`crm.pipeline.category.alias` owns a native `mail.alias` whose defaults set
+`pipeline_category_id` and `type=opportunity`. All aliases for a category point
+to the same pipeline. `mail.thread.message_route` is extended to suppress two
+routes that resolve to the same category for one incoming message; routes to
+different categories are preserved.
 
 Sales users read permitted categories; Sales Managers configure them. A global
 company rule allows shared categories and selected allowed companies. Shared
@@ -132,20 +164,31 @@ kpability_pipeline_categories/
   __init__.py, __manifest__.py
   docs/pipeline-categories.md
   docs/evidence/
-  models/crm_pipeline_category.py, crm_stage.py, crm_lead.py
+  models/crm_pipeline_category.py, crm_pipeline_category_alias.py,
+         crm_stage.py, crm_lead.py, mail_thread.py
   security/ir.access.csv
   views/crm_pipeline_category_views.xml, crm_stage_views.xml, crm_lead_views.xml
   tests/test_pipeline_categories.py
   tests/e2e/test_pipeline_categories.py
+  README.md
+kpability_website_pipeline_categories/
+  __manifest__.py
+  controllers/main.py
+  models/crm_pipeline_category.py
+  static/src/js/pipeline_category_form.js
+  views/crm_pipeline_category_views.xml, website_templates.xml, snippets.xml
+  tests/test_website_pipeline_categories.py
   README.md
 ```
 
 The browser runner is not imported by `tests/__init__.py`; normal Odoo test
 loading does not require Playwright.
 
-The only add-on dependency is `crm`; there are no custom frontend assets. Native
-form, quick-create, list, search, Kanban and stage views are inherited, preserving
-Enterprise view types and native actions rather than copying them.
+The base add-on depends only on `crm` and ships no custom frontend assets. The
+optional website companion add-on supplies the small category-list script for its
+public form. Native form, quick-create, list, search, Kanban and stage views are
+inherited, preserving Enterprise view types and native actions rather than copying
+them.
 
 The team consumer can depend on this add-on and use the model/fields above and
 `category._check_assignable()` (read-access and active-category checks). Further
@@ -163,14 +206,16 @@ do not commit local credentials. Stop a server before updating **its** database.
   --addons-path="../enterprise,../odoo/addons,$PWD" \
   --db_host=127.0.0.1 --db_port=55420 --db_user=odoo \
   --db_password="$ODOO_DB_PASSWORD" --database=kpability_pipeline_verify \
-  --init=kpability_pipeline_categories,crm_enterprise,web_enterprise \
-  --without-demo=True --test-enable --test-tags=/kpability_pipeline_categories \
+  --init=kpability_website_pipeline_categories,crm_enterprise,web_enterprise \
+  --without-demo=True --test-enable \
+  --test-tags=/kpability_pipeline_categories,/kpability_website_pipeline_categories \
   --stop-after-init --http-interface=127.0.0.1 --http-port=18024 \
   --data-dir=/tmp/opencode/kpability-odoo20-data
 ```
 
 For a subsequent module-update check, replace `--init=...` with
-`--update=kpability_pipeline_categories` on that same disposable database.
+`--update=kpability_pipeline_categories,kpability_website_pipeline_categories` on
+that same disposable database.
 The Odoo virtual environment uses Python 3.12, `../odoo/requirements.txt`,
 `websocket-client==1.9.2` and `markdown2==2.5.5`.
 
@@ -195,28 +240,30 @@ dataset for inspection; never use client data. Screenshots, named videos and
 the base directory with `ODOO_E2E_ARTIFACTS`). Do not run concurrent suites on the
 same database.
 
-## 6. Executed results, November 11, 2026
+## 6. Executed results, November 12, 2026
 
 | Check | Actual result / evidence |
 | --- | --- |
-| Model/access/consistency regression | **36 passed**, zero failures/errors; `/tmp/opencode/kpability-pipeline-upgrade-update.log` |
-| Latest standalone fresh Enterprise install | **38 passed** (36 feature + 2 native web post-tests), zero failures/errors; `/tmp/opencode/kpability-pipeline-fresh-final.log` |
-| Existing native data, initial add-on install | Three open/Won/Lost opportunities retained exact name, active, stage, team, company, probability and revenue; all remained unclassified |
-| Same-version module update | The three legacy records, one categorized record and its stage mappings retained exact snapshots; Enterprise installed without `workspace_management` |
-| Browser | **8 passed**; configuration, exact scoped columns/reload, explicit Save/Discard, invalid save/RPC, real sales-user read-only access, quick-create, invalid mouse drag, native group-by |
+| Fresh Enterprise install of both add-ons | **45 passed** (43 feature tests + 2 native web post-tests), zero failures/errors; `/tmp/opencode/kpability-pipeline-final-fresh.log` |
+| Module update on the installed test database | **43 passed**, zero failures/errors; `/tmp/opencode/kpability-pipeline-final-tests.log` |
+| Existing native data, initial add-on install | Earlier run: three open/Won/Lost opportunities retained exact name, active, stage, team, company, probability and revenue; all remained unclassified |
+| Same-version module update | Earlier run: the three legacy records, one categorized record and its stage mappings retained exact snapshots; Enterprise installed without `workspace_management` |
+| Browser | **10 passed**; configuration, overview card to scoped board, simplified stage reorder, exact scoped columns/reload, explicit Save/Discard, invalid save/RPC, real sales-user read-only access, quick-create, invalid mouse drag, native group-by |
 
-After moving the documentation, evidence and browser runner inside the add-on,
-the regression rerun passed **36 Odoo tests** (`/tmp/opencode/kpability-pipeline-reorg-tests.log`)
-and **8 browser tests** (run `1111095756`, **12.951s**). The drag runner now waits
-for unfolded columns and verifies the intended target-stage RPC. Application
-models, views and security are unchanged; retained evidence files are byte-identical.
-Raw rerun artifacts remain in `/tmp/opencode/kpability-pipeline-e2e/1111095756/`.
+The browser run used `kpability_pipeline_final_test` on loopback port 18021
+(run `1112040040`, **15.100s**). Screenshots and videos are in
+`/tmp/opencode/kpability-pipeline-e2e-final/1112040040/`. A later rerun on the
+freshly installed database after the starter-hook and website-controller changes
+also passed **10/10** (run `1112040448`, **14.905s**; artifacts in
+`/tmp/opencode/kpability-pipeline-e2e/1112040448/`). The suite verifies persisted
+values through actual RPC as well as the visible interface and fails on unexpected
+JavaScript page errors.
 
-Lifecycle logs: `/tmp/opencode/kpability-pipeline-upgrade-install.log` and
-`/tmp/opencode/kpability-pipeline-upgrade-update.log`. This is installation over
-native data and a same-version module update, **not** a cross-major migration.
-Browser runs verify persisted values through actual RPC as well as the visible
-interface and fail on unexpected JavaScript page errors.
+Lifecycle logs from the earlier native-data checks remain
+`/tmp/opencode/kpability-pipeline-upgrade-install.log` and
+`/tmp/opencode/kpability-pipeline-upgrade-update.log`. That is installation over
+native data and a same-version module update, **not** a cross-major migration. The
+latest fresh-install and update runs above use disposable databases.
 
 | Case | Executed coverage | Remaining acceptance evidence / gate |
 | --- | --- | --- |
@@ -231,10 +278,15 @@ interface and fail on unexpected JavaScript page errors.
 | PC-09 | Standalone fresh Enterprise install; native lead conversion/duplication and unclassified behavior | Leads disabled/enabled settings UI rehearsal |
 | PC-10 | Legacy install/update snapshots; hidden/archived mapping and scope-edit rejection | Checker configuration-removal UI check |
 | PC-11 | Second company/dataset reuse test, without code edits | Optional team-consumer co-installation and reuse recording |
+| PC-12 | Overview starter/defaults/counts/ACL; browser card opens the scoped board | Checker reproduction on client data |
+| PC-13 | Email alias defaults, rename/unlink, duplicate-route suppression and Sales ACL ORM tests | Inbound gateway rehearsal on staging |
+| PC-14 | Website availability, public endpoint and two-pipeline website POST tests | Website UAT and browser form capture |
+| PC-15 | Browser Reorder Stages opens one business-facing list; no Sales Teams, Is Won or Folded columns | Checker reproduction with a reused native stage |
 
 Additional ORM coverage includes native Lost/restore/rainbowman, per-category/team
-bulk Won, missing Won preflight, merge conflicts/preservation and a 50-record
-batch fixture. That fixture is **not** a production performance benchmark.
+bulk Won, missing Won preflight, merge conflicts/preservation, a 50-record batch
+fixture, incoming alias route deduplication and website category creation. The
+batch fixture is **not** a production performance benchmark.
 Native stages have no archive flag, so no invented stage-archive case is claimed.
 Curated [visual evidence](evidence/README.md) is retained in
 the repository; full raw artifacts remain local. All PC cases are **not** marked
