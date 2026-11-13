@@ -1,60 +1,35 @@
-# Kpability Website Pipeline Categories
+# Website Pipeline Categories — retired compatibility module
 
-Optional website companion for
-[`kpability_pipeline_categories`](../kpability_pipeline_categories/README.md).
+Website and incoming-email intake are deferred to a separate reviewed PR:
+[issue #6](https://github.com/Kpability/kpability-workspace-management/issues/6),
+following merged [PR #4](https://github.com/Kpability/kpability-workspace-management/pull/4).
 
-## What it does
+**Do not install this module on new deployments.** Install only
+[`kpability_pipeline_categories`](../kpability_pipeline_categories/README.md)
+for core CRM pipeline categories.
 
-- Lets a website visitor choose one or more **pipeline categories** in a CRM form.
-- Creates **one CRM opportunity per selected pipeline**, never two in the same
-  pipeline for one submission.
-- Shows only active, stage-configured categories explicitly enabled on the current
-  website and compatible with the website company.
-- Preserves native `website_crm` behavior: visitor/partner identity, phone
-  normalization, website company, language, description, attachments and UTM
-  handling.
+## Existing installations
 
-Incoming-email routing is part of the base add-on: each pipeline can own one or
-more native email aliases, and duplicate routes into the same pipeline are
-suppressed for a single message.
+Keep this directory available and upgrade both installed Kpability modules.
+Removing an installed add-on or uninstalling it is not a safe substitute for
+this upgrade. Back up the database, filestore and matching code first.
 
-## Installation
+This module now retains only upgrade compatibility:
 
-1. Install `kpability_pipeline_categories` and `website_crm`.
-2. Install `kpability_website_pipeline_categories`.
-3. Open **CRM → Configuration → Pipeline → Pipeline Categories**.
-4. On each pipeline, open the **Websites** tab and select the websites where it
-   may be offered.
+- Existing `website_ids` mappings remain stored, without an exposed configuration tab.
+- The editor snippet is inactive and the public category endpoint is removed.
+- Existing `t-call` references resolve to an unavailable notice, not a form.
+- Previously copied pipeline forms are disabled by a small browser guard.
+- Cached pipeline-selection submissions are rejected; no fan-out or custom
+  attachment handling remains.
+- Ordinary native `website_crm` submissions are untouched.
 
-## Adding the form
+Existing website pages, CRM records and mappings are not deleted. The base
+module separately retires its owned email aliases while retaining their
+configuration. Re-enabling either integration requires the future reviewed PR.
 
-In the website editor, open the block picker and add **CRM Pipeline Form** under
-**Contact & Forms**. It includes name, email, company, phone, message and a
-pipeline selector populated from the server. The selector supports choosing
-multiple pipelines.
+## Regression checks
 
-The public endpoint is `GET /kpability/pipeline-categories`. The form posts to the
-standard `/website/form/crm.lead` route; category selections are validated again
-on the server, and an unavailable or archived category rejects the whole request
-instead of creating a partial set of opportunities.
-
-## Security
-
-- Website visitors do not receive category read access.
-- The public endpoint exposes only the display name and description of categories
-  enabled for that website.
-- All availability and company checks are repeated in `insert_record()`; the
-  browser selection is not trusted.
-
-## Tests
-
-```bash
---test-tags=/kpability_website_pipeline_categories
-```
-
-The test module covers availability, the public endpoint, native form submission
-configuration, two-pipeline creation, duplicate selections, unavailable-category
-rollback, and attachment contents in every created record. The base add-on's
-optional Playwright case also submits the actual public form, verifies the
-success redirect and checks both persisted opportunities. Staging website UAT
-and external email delivery still require access and gateway configuration.
+Use `--test-tags=/kpability_website_pipeline_categories` on an isolated Odoo 20
+Enterprise database. Tests cover the retired endpoint, rejected stale submissions,
+retained mappings/template references, inactive UI, and ordinary native CRM forms.

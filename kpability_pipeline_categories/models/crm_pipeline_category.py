@@ -33,11 +33,6 @@ class CrmPipelineCategory(models.Model):
     )
     s_normalized_name = fields.Char(compute="_compute_normalized_name", store=True, precompute=True)
     lead_count = fields.Integer(compute="_compute_lead_count")
-    alias_ids = fields.One2many(
-        "crm.pipeline.category.alias",
-        "category_id",
-        string="Incoming Email Addresses",
-    )
 
     _name_scope_unique = models.Constraint(
         "UNIQUE NULLS NOT DISTINCT (company_id, s_normalized_name)",

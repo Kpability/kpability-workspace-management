@@ -351,20 +351,29 @@ class PipelineCategoryBrowserTests(unittest.TestCase):
         expect(self.page.locator(".o_list_view [name='is_won']")).to_have_count(0)
         expect(self.page.locator(".o_list_view [name='fold']")).to_have_count(0)
 
-    def test_11_public_website_form_creates_selected_pipelines(self):
+    def test_11_category_has_no_website_or_email_configuration(self):
+        self.open_record("crm.pipeline.category", self.categories[0])
+        expect(self.page.get_by_role("tab", name="Incoming Email Addresses", exact=True)).to_have_count(0)
+        expect(self.page.get_by_role("tab", name="Websites", exact=True)).to_have_count(0)
+        expect(self.page.locator("[name='alias_ids'], [name='website_ids']")).to_have_count(0)
+
+    def test_12_legacy_website_form_is_disabled(self):
         if not self.call("ir.module.module", "search_count", [[
             ["name", "=", "kpability_website_pipeline_categories"], ["state", "=", "installed"],
         ]]):
-            self.skipTest("The optional website companion is not installed.")
+            self.skipTest("The retired website compatibility module is not installed.")
         website = self.call("website", "search", [[]], limit=1)[0]
-        self.call("crm.pipeline.category", "write", [self.categories, {"website_ids": [[6, 0, [website]]]}])
-        path = f"/kp-pipeline-form-{self.run_id}"
+        path = f"/kp-retired-form-{self.run_id}"
         self.call("website.page", "create", [{
-            "name": f"E2E Pipeline Form {self.run_id}", "type": "qweb",
-            "key": f"kpability_website_pipeline_categories.e2e_form_{self.run_id}",
+            "name": f"E2E Retired Pipeline Form {self.run_id}", "type": "qweb",
+            "key": f"kpability_website_pipeline_categories.e2e_retired_{self.run_id}",
             "url": path, "website_id": website, "is_published": True,
             "arch": '<t t-call="website.layout"><div id="wrap">'
-                    '<t t-call="kpability_website_pipeline_categories.pipeline_category_form"/>'
+                    '<form action="/website/form/" data-model_name="crm.lead">'
+                    '<input name="name"/>'
+                    '<div data-kp-pipeline-categories="1"/>'
+                    '<a href="#" class="s_website_form_send">Submit</a>'
+                    '</form>'
                     '</div></t>',
         }])
         public_context = self.browser.new_context(base_url=self.url, viewport={"width": 1440, "height": 1000})
@@ -373,24 +382,12 @@ class PipelineCategoryBrowserTests(unittest.TestCase):
         try:
             public_page.goto(path, wait_until="domcontentloaded")
             expect(public_page.locator("body")).to_have_attribute("is-ready", "true")
-            form = public_page.locator(".s_website_form form")
-            form.locator("[name='name']").fill(f"E2E Website Inquiry {self.run_id}")
-            form.locator("[name='email_from']").fill(f"e2e-website-{self.run_id}@example.test")
-            form.locator("[name='description']").fill("Please contact me about both selected pipelines.")
-            for category_id in self.categories:
-                form.locator(f"[name='kp_pipeline_category_id_{category_id}']").check()
-            public_page.screenshot(path=str(self.output / "website-pipeline-selection.png"), full_page=True)
-            with public_page.expect_response(lambda response: "/website/form/crm.lead" in response.url) as submitted:
-                form.locator(".s_website_form_send").click()
-            self.assertEqual(submitted.value.status, 200)
-            expect(public_page).to_have_url(re.compile(r"/contactus-thank-you$"))
-            public_page.screenshot(path=str(self.output / "website-pipeline-success.png"), full_page=True)
-            leads = self.call("crm.lead", "search_read", [[
-                ["name", "=", f"E2E Website Inquiry {self.run_id}"],
-            ]], fields=["pipeline_category_id", "stage_id"])
-            self.assertEqual(len(leads), 2)
-            self.assertEqual({lead["pipeline_category_id"][0] for lead in leads}, set(self.categories))
-            self.assertTrue(all(lead["stage_id"][0] == self.stages[0] for lead in leads))
+            expect(public_page.locator("[data-kp-pipeline-categories]")).to_contain_text("intake is unavailable")
+            expect(public_page.locator("form [name='name']")).to_be_disabled()
+            expect(public_page.locator(".s_website_form_send")).to_have_count(0)
+            expect(public_page.locator("form [role='checkbox']")).to_have_count(0)
+            self.assertEqual(public_context.request.get("/kpability/pipeline-categories").status, 404)
+            public_page.screenshot(path=str(self.output / "retired-website-form.png"), full_page=True)
         finally:
             public_context.close()
 
