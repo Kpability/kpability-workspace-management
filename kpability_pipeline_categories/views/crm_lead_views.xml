@@ -1,0 +1,93 @@
+<odoo>
+    <record id="crm_lead_view_form_pipeline_category" model="ir.ui.view">
+        <field name="name">crm.lead.form.pipeline.category</field>
+        <field name="model">crm.lead</field>
+        <field name="inherit_id" ref="crm.crm_lead_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//sheet/field[@name='company_id']" position="after">
+                <field name="pipeline_category_stage_ids" invisible="True"/>
+            </xpath>
+            <xpath expr="//header/field[@name='stage_id']" position="attributes">
+                <attribute name="domain">['|', ('team_ids', 'in', team_id), ('team_ids', '=', False)] + ([('id', 'in', pipeline_category_stage_ids)] if pipeline_category_id else [])</attribute>
+            </xpath>
+            <xpath expr="//field[@name='tag_ids']" position="before">
+                <field name="pipeline_category_id" options="{'no_create': True, 'no_open': True}"/>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="crm_quick_create_view_pipeline_category" model="ir.ui.view">
+        <field name="name">crm.lead.quick.create.pipeline.category</field>
+        <field name="model">crm.lead</field>
+        <field name="inherit_id" ref="crm.quick_create_opportunity_form"/>
+        <field name="arch" type="xml">
+            <field name="company_id" position="after">
+                <field name="pipeline_category_id" options="{'no_create': True, 'no_open': True}"
+                    readonly="context.get('pipeline_category_scope_id', False)"/>
+            </field>
+        </field>
+    </record>
+
+    <record id="crm_opportunity_view_list_pipeline_category" model="ir.ui.view">
+        <field name="name">crm.lead.list.opportunity.pipeline.category</field>
+        <field name="model">crm.lead</field>
+        <field name="inherit_id" ref="crm.crm_case_tree_view_oppor"/>
+        <field name="arch" type="xml">
+            <field name="stage_id" position="before">
+                <field name="pipeline_category_stage_ids" column_invisible="True"/>
+                <field name="pipeline_category_id" optional="show" options="{'no_create': True}"/>
+            </field>
+        </field>
+    </record>
+
+    <record id="crm_lead_view_list_pipeline_category" model="ir.ui.view">
+        <field name="name">crm.lead.list.pipeline.category</field>
+        <field name="model">crm.lead</field>
+        <field name="inherit_id" ref="crm.crm_case_tree_view_leads"/>
+        <field name="arch" type="xml">
+            <field name="name" position="after">
+                <field name="pipeline_category_stage_ids" column_invisible="True"/>
+                <field name="pipeline_category_id" optional="show" options="{'no_create': True}"/>
+            </field>
+        </field>
+    </record>
+
+    <record id="crm_opportunity_view_search_pipeline_category" model="ir.ui.view">
+        <field name="name">crm.lead.search.opportunity.pipeline.category</field>
+        <field name="model">crm.lead</field>
+        <field name="inherit_id" ref="crm.view_crm_case_opportunities_filter"/>
+        <field name="arch" type="xml">
+            <field name="team_id" position="after">
+                <field name="pipeline_category_id" context="{'active_test': False}"/>
+            </field>
+            <filter name="saleschannel" position="after">
+                <filter name="pipeline_category" string="Category" context="{'group_by': 'pipeline_category_id'}"/>
+            </filter>
+        </field>
+    </record>
+
+    <record id="crm_lead_view_search_pipeline_category" model="ir.ui.view">
+        <field name="name">crm.lead.search.pipeline.category</field>
+        <field name="model">crm.lead</field>
+        <field name="inherit_id" ref="crm.view_crm_case_leads_filter"/>
+        <field name="arch" type="xml">
+            <field name="team_id" position="after">
+                <field name="pipeline_category_id" context="{'active_test': False}"/>
+            </field>
+            <filter name="saleschannel" position="after">
+                <filter name="pipeline_category" string="Category" context="{'group_by': 'pipeline_category_id'}"/>
+            </filter>
+        </field>
+    </record>
+
+    <record id="crm_opportunity_view_kanban_pipeline_category" model="ir.ui.view">
+        <field name="name">crm.lead.kanban.pipeline.category</field>
+        <field name="model">crm.lead</field>
+        <field name="inherit_id" ref="crm.crm_case_kanban_view_leads"/>
+        <field name="arch" type="xml">
+            <xpath expr="//t[@t-name='card']/field[@name='tag_ids']" position="before">
+                <field name="pipeline_category_id" class="text-muted small" invisible="not pipeline_category_id"/>
+            </xpath>
+        </field>
+    </record>
+</odoo>

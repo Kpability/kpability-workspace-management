@@ -1,0 +1,74 @@
+{
+  "run": "20261111T094008Z",
+  "url": "http://127.0.0.1:18020",
+  "database": "kpability_pipeline_dev",
+  "cases": [
+    {
+      "case": "01",
+      "test": "Create category through menus",
+      "screenshots": [
+        "01-passed.png"
+      ],
+      "actual": "Created Test Pipeline 094008 through Configuration with New/Qualified/Won; Proposition excluded.",
+      "status": "PASSED"
+    },
+    {
+      "case": "02",
+      "test": "Open scoped pipeline and create opportunity",
+      "screenshots": [
+        "02-passed.png"
+      ],
+      "actual": "Exactly three columns; UI-created opportunity automatically classified in New and retained after reload.",
+      "status": "PASSED"
+    },
+    {
+      "case": "03",
+      "test": "Move to allowed stage",
+      "screenshots": [
+        "03-passed.png"
+      ],
+      "actual": "Real mouse drag New \u2192 Qualified succeeded and persisted after refresh.",
+      "status": "PASSED"
+    },
+    {
+      "case": "04",
+      "test": "Reject invalid stage",
+      "screenshots": [
+        "04-passed.png"
+      ],
+      "actual": "Expected validation dialog appeared; invalid move was rejected and persisted stage remained Qualified.",
+      "status": "PASSED"
+    },
+    {
+      "case": "05",
+      "test": "Save and discard",
+      "screenshots": [
+        "05a-discard-restored-original.png",
+        "05-passed.png"
+      ],
+      "actual": "Discard restored revenue 0.0; explicit Save retained 4321 after refresh.",
+      "status": "PASSED"
+    },
+    {
+      "case": "06",
+      "test": "Mark as Won",
+      "screenshots": [
+        "06-passed.png"
+      ],
+      "actual": "Native Won button selected the mapped Won stage with 100% probability; category preserved after refresh.",
+      "status": "PASSED"
+    }
+  ],
+  "edition": "20.0+e",
+  "browser": "158.0.8127.18",
+  "category_name": "Test Pipeline 094008",
+  "deal_name": "Test Deal 094008",
+  "stages": {
+    "New": 1,
+    "Qualified": 2,
+    "Proposition": 3,
+    "Won": 4
+  },
+  "category_id": 29,
+  "deal_id": 116
+}
