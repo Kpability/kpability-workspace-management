@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="crm_lead_view_form_department" model="ir.ui.view">
+        <field name="name">crm.lead.form.department.dropdown</field>
+        <field name="model">crm.lead</field>
+        <field name="inherit_id" ref="crm.crm_lead_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='user_id']" position="before">
+                <field name="j_dropdown_salesperson_domain" invisible="1"/>
+                <field name="s_dropdown_salesperson_hint" invisible="1"/>
+            </xpath>
+            <xpath expr="//field[@name='user_id']" position="attributes">
+                <attribute name="domain">j_dropdown_salesperson_domain</attribute>
+                <attribute name="groups">base.group_user</attribute>
+                <attribute name="options">{'no_create': True}</attribute>
+            </xpath>
+            <xpath expr="//field[@name='user_id']" position="after">
+                <div class="alert alert-warning" role="status" colspan="2" groups="base.group_user"
+                     invisible="not s_dropdown_salesperson_hint">
+                    <field name="s_dropdown_salesperson_hint" nolabel="1"/>
+                </div>
+            </xpath>
+        </field>
+    </record>
+    <record id="res_partner_view_form_department" model="ir.ui.view">
+        <field name="name">res.partner.form.department.dropdown</field>
+        <field name="model">res.partner</field>
+        <field name="inherit_id" ref="base.view_partner_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//group[@name='sale']/field[@name='user_id']" position="before">
+                <field name="j_dropdown_salesperson_domain" invisible="1"/>
+                <field name="s_dropdown_salesperson_hint" invisible="1"/>
+            </xpath>
+            <xpath expr="//group[@name='sale']/field[@name='user_id']" position="attributes">
+                <attribute name="domain">[('share', '=', False)] + j_dropdown_salesperson_domain</attribute>
+                <attribute name="groups">base.group_user</attribute>
+                <attribute name="options">{'no_create': True}</attribute>
+            </xpath>
+            <xpath expr="//group[@name='sale']/field[@name='user_id']" position="after">
+                <div class="alert alert-warning" role="status" colspan="2" groups="base.group_user"
+                     invisible="not s_dropdown_salesperson_hint">
+                    <field name="s_dropdown_salesperson_hint" nolabel="1"/>
+                </div>
+            </xpath>
+        </field>
+    </record>
+</odoo>

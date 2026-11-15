@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="dropdown_filter_view_list" model="ir.ui.view">
+        <field name="name">dropdown.filters.list</field>
+        <field name="model">dropdown.filters</field>
+        <field name="arch" type="xml">
+            <list decoration-muted="not active">
+                <field name="s_name"/>
+                <field name="adapter_id"/>
+                <field name="company_id"/>
+                <field name="active" widget="boolean_toggle"/>
+            </list>
+        </field>
+    </record>
+    <record id="dropdown_filter_view_form" model="ir.ui.view">
+        <field name="name">dropdown.filters.form</field>
+        <field name="model">dropdown.filters</field>
+        <field name="arch" type="xml">
+            <form string="Dependent Dropdown Filter">
+                <sheet>
+                    <div class="alert alert-info" role="status">
+                        Filters start inactive. Review the binding, company and existing assignments
+                        before activation. Activation never changes saved business records.
+                    </div>
+                    <group>
+                        <field name="s_name"/>
+                        <field name="company_id" options="{'no_create': True}"/>
+                        <field name="adapter_id" options="{'no_create': True, 'no_open': True}"/>
+                        <field name="active"/>
+                    </group>
+                    <group name="adapter_configuration"/>
+                </sheet>
+            </form>
+        </field>
+    </record>
+    <record id="dropdown_filter_action" model="ir.actions.act_window">
+        <field name="name">Dependent Dropdown Filters</field>
+        <field name="res_model">dropdown.filters</field>
+        <field name="view_mode">list,form</field>
+        <field name="context">{'active_test': False}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Configure a supported dependent dropdown</p>
+            <p>Install an adapter first, then create an inactive rule for the applicable tenant company.</p>
+        </field>
+    </record>
+    <menuitem id="dropdown_filter_menu" name="Dependent Dropdown Filters"
+              parent="base.menu_custom" action="dropdown_filter_action"
+              groups="base.group_system" sequence="80"/>
+</odoo>

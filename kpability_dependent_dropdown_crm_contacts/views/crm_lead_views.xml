@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="crm_lead_view_form_dropdown" model="ir.ui.view">
+        <field name="name">crm.lead.form.dependent.dropdown</field>
+        <field name="model">crm.lead</field>
+        <field name="inherit_id" ref="crm.crm_lead_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//group[@name='lead_partner']/field[@name='partner_id'][1]" position="before">
+                <field name="customer_company_id" options="{'no_create': True}"/>
+                <field name="j_dropdown_contact_domain" invisible="1"/>
+                <field name="s_dropdown_contact_hint" invisible="1"/>
+                <div class="alert alert-warning" role="status" colspan="2" groups="base.group_user"
+                     invisible="not s_dropdown_contact_hint">
+                    <field name="s_dropdown_contact_hint" nolabel="1"/>
+                </div>
+            </xpath>
+            <!-- Both lead and opportunity selectors; native contexts/widgets stay intact. -->
+            <xpath expr="//group[@name='lead_partner']/field[@name='partner_id'][1]" position="attributes">
+                <attribute name="domain">j_dropdown_contact_domain</attribute>
+                <attribute name="groups">base.group_user</attribute>
+                <attribute name="options">{'no_create': True}</attribute>
+                <attribute name="placeholder">Select a contact...</attribute>
+            </xpath>
+            <xpath expr="//group[@name='lead_partner']/field[@name='partner_id'][2]" position="attributes">
+                <attribute name="domain">j_dropdown_contact_domain</attribute>
+                <attribute name="groups">base.group_user</attribute>
+                <attribute name="options">{'no_create': True}</attribute>
+                <attribute name="placeholder">Select a contact...</attribute>
+            </xpath>
+        </field>
+    </record>
+</odoo>

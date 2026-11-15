@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="res_partner_view_form_dropdown" model="ir.ui.view">
+        <field name="name">res.partner.form.dependent.dropdown</field>
+        <field name="model">res.partner</field>
+        <field name="inherit_id" ref="base.view_partner_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//group[@name='sale']" position="inside">
+                <field name="j_dropdown_primary_contact_domain" invisible="1"/>
+                <field name="s_dropdown_primary_contact_hint" invisible="1"/>
+                <field name="primary_contact_id" invisible="not is_company" groups="base.group_user"
+                       domain="j_dropdown_primary_contact_domain" options="{'no_create': True}"/>
+                <div class="alert alert-warning" role="status" colspan="2" groups="base.group_user"
+                     invisible="not is_company or not s_dropdown_primary_contact_hint">
+                    <field name="s_dropdown_primary_contact_hint" nolabel="1"/>
+                </div>
+            </xpath>
+        </field>
+    </record>
+</odoo>

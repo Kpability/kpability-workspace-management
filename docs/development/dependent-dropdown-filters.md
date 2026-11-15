@@ -3,13 +3,76 @@
 | Item | Plan |
 | --- | --- |
 | Branch | `feature/dependent-dropdown-filters` |
-| Target platform | Odoo 20; exact build and APIs unverified |
+| Target platform | Odoo 20 Community `24f007f4f8a2dbdab05c1b4aecf48bd4e9c4251e`; Enterprise `7773cfc038583d1b664491128424cd1904be946c`; locally verified, not release-certified |
 | Owner / checker | Fyke / checker to confirm with Sir Roy |
 | Source delivery target | November 17, 2026 (S1 p.2) |
-| Status | Proposed development plan only; no implementation or tests performed |
-| Proposed add-on family | `kpability_dependent_dropdown_filters` with approved CRM/Contacts and optional HR adapters |
+| Status | Core and approved CRM/Contacts/optional HR adapters implemented locally November 15; 27 final model checks + 10 actual-Brave remote-debugging browser cases pass; independent review/release gates pending |
+| Add-on family | `kpability_dependent_dropdown_filters`, `kpability_dependent_dropdown_crm_contacts`, `kpability_dependent_dropdown_hr` |
 
-Read [shared standards](shared-standards.md) for source IDs S1–S4/U1, naming, ownership, security, PR evidence and deployment requirements. Proposed technical names are not APIs verified in this checkout.
+Read [shared standards](shared-standards.md) for source IDs S1–S4/U1, naming, ownership, security, PR evidence and deployment requirements. The original proposal below remains a planning record; this baseline and the [implementation record](../../kpability_dependent_dropdown_filters/docs/dependent-dropdown-filters.md) distinguish implemented scope from pending release gates.
+
+## Implementation baseline — November 15, 2026
+
+After authorizing implementation, the user explicitly approved:
+
+- Adding CRM `customer_company_id` and Contacts `primary_contact_id`, preserving
+  native CRM `partner_id`, `partner_name` and tenant `company_id`.
+- Active non-company direct children only; missing parent means no choices;
+  retain stale selections with a warning and explicit correction when changing
+  the relationship. Unrelated unchanged legacy edits remain allowed.
+- Intersect native domains and disable selector creation shortcuts.
+- A maintained department record per tenant company, exact membership only,
+  active internal users through active employees, subject to ordinary-user
+  access verification and no new private-HR permissions.
+
+These are implementation approvals, not independent checker/HR-owner sign-off
+or authorization to deploy, activate company rules, merge, push or open a PR.
+Work is isolated on the existing `feature/dependent-dropdown-filters` branch in
+`/tmp/opencode/kpability-dependent-dropdown-filters`, based on `fa14da4`.
+The dirty sales-team worktree is untouched. No sibling feature was merged.
+
+Source inspection of the exact Community checkout above confirms:
+
+- Native CRM `partner_id` is a customer/contact Many2one; `partner_name` is text,
+  not a selectable customer company. `company_id` is the tenant company.
+   The approved CRM selector filters the existing Contact field; Contacts adds a
+   company-only Primary Contact selector.
+- Native CRM `user_id` selects internal users, not Sales-department employees.
+  HR adds current-company employee relations and a public employee projection,
+   with native internal-user read access to its public projection. The optional
+   adapter uses that projection, not private employee records.
+- Native domains already provide relational search/pagination. The gap is
+  maintained, validated configuration, not a replacement search engine.
+- Odoo 20 exposes `odoo.fields.Domain` and `models.Constraint`. Its web
+  `Many2OneField` wraps `Many2One` through `computeM2OProps`; this is not the old
+  widget API. No global web patch or `name_search` override is justified.
+
+**Implementation:** a bounded code-registered binding catalog, maintained
+per-tenant filter records, native computed JSON domains, native inherited forms,
+and create/write validation of changed final relationships. No custom widget,
+global search patch, executable configuration, automatic assignment, data
+backfill, seeded filter, cache, or elevated resolver is introduced. Rules default
+inactive. Internal users can read company-scoped runtime configuration;
+administrators maintain it. Catalog bindings cannot be edited through normal
+user permissions.
+
+The optional HR adapter intersects the native internal-user/company domain with
+an access-respecting `employee_public_ids any` predicate. Exact department
+references are configurable; a department named “Sales” is not hard-coded.
+Generic and CRM/Contacts installations do not require HR.
+
+Native Odoo 20 company classification and CRM assignment recomputation remain
+unchanged. On this exact build `res.partner.is_company` is computed from the
+commercial-partner relationship and VAT; synthetic fixtures respect that rule.
+Selecting a customer company does not force a tenant company or silently repair
+an incompatible native assignment.
+
+Installation, upgrades, backend tests and browser evidence use only newly
+created `kpability_ddf_*` databases on the isolated localhost PostgreSQL fixture.
+No company database is accessed. Exact results and remaining acceptance gaps are
+recorded in the implementation record. Combined sibling modules, production-sized performance,
+external integration compatibility, Odoo.sh/UAT and checker approval remain
+release gates. The November 17 source date is not a new completion promise.
 
 ## 1. Objective and requirements
 
