@@ -6,7 +6,7 @@
 | Target platform | Odoo 20 Community `24f007f4f8a2dbdab05c1b4aecf48bd4e9c4251e`; Enterprise `7773cfc038583d1b664491128424cd1904be946c`; locally verified, not release-certified |
 | Owner / checker | Fyke / checker to confirm with Sir Roy |
 | Source delivery target | November 17, 2026 (S1 p.2) |
-| Status | Core and approved CRM/Contacts/optional HR adapters implemented locally November 15; 27 final model checks + 10 actual-Brave remote-debugging browser cases pass; independent review/release gates pending |
+| Status | Implemented November 15 and updated against default `20`; 30 dropdown + 50 approved pipeline/website checks pass on upgrade, 82 including framework on fresh install, plus 10 actual-Brave cases; independent review/release gates pending |
 | Add-on family | `kpability_dependent_dropdown_filters`, `kpability_dependent_dropdown_crm_contacts`, `kpability_dependent_dropdown_hr` |
 
 Read [shared standards](shared-standards.md) for source IDs S1–S4/U1, naming, ownership, security, PR evidence and deployment requirements. The original proposal below remains a planning record; this baseline and the [implementation record](../../kpability_dependent_dropdown_filters/docs/dependent-dropdown-filters.md) distinguish implemented scope from pending release gates.
@@ -26,10 +26,14 @@ After authorizing implementation, the user explicitly approved:
   access verification and no new private-HR permissions.
 
 These are implementation approvals, not independent checker/HR-owner sign-off
-or authorization to deploy, activate company rules, merge, push or open a PR.
+or authorization to deploy or activate company rules. The user subsequently
+authorized committing, pushing and opening this feature PR, after updating it
+against the default branch and retesting; reference PDFs must remain uncommitted.
 Work is isolated on the existing `feature/dependent-dropdown-filters` branch in
-`/tmp/opencode/kpability-dependent-dropdown-filters`, based on `fa14da4`.
-The dirty sales-team worktree is untouched. No sibling feature was merged.
+`/tmp/opencode/kpability-dependent-dropdown-filters`, originally based on `fa14da4`.
+The default branch is `20`, not `main`. Its fetched head `cf54708` (including
+approved PR #4) was merged without conflicts in `0429dac`. The dirty sales-team
+worktree is untouched; no unreviewed sibling feature was merged.
 
 Source inspection of the exact Community checkout above confirms:
 
@@ -70,7 +74,8 @@ an incompatible native assignment.
 Installation, upgrades, backend tests and browser evidence use only newly
 created `kpability_ddf_*` databases on the isolated localhost PostgreSQL fixture.
 No company database is accessed. Exact results and remaining acceptance gaps are
-recorded in the implementation record. Combined sibling modules, production-sized performance,
+recorded in the implementation record. Combined approved pipeline/website checks
+pass; unmerged team/stage/shared-button integration, production-sized performance,
 external integration compatibility, Odoo.sh/UAT and checker approval remain
 release gates. The November 17 source date is not a new completion promise.
 

@@ -29,7 +29,9 @@ The workflow and repository conventions were compared with
 `feature/pipeline-categories`, and the existing sales-team implementation:
 module-local code/docs/tests, native inherited views, Odoo 20 permissions,
 explicit configuration, changed-relationship validation, legacy preservation and
-synthetic visual evidence. No sibling code was modified or merged.
+synthetic visual evidence. No sibling code was modified. The approved default
+branch `origin/20` was subsequently merged as described below; unreviewed sibling
+branches and the original dirty sales-team worktree were not included.
 
 ## Exact baseline and native gap
 
@@ -40,7 +42,8 @@ synthetic visual evidence. No sibling code was modified or merged.
 | Full local runtime | `20.0+e`, including `web_enterprise`, `crm_enterprise`, `contacts`, `hr` |
 | Python / PostgreSQL | CPython 3.12.14 / isolated PostgreSQL 16 container |
 | Add-on versions | All three `20.0.1.0.0`, LGPL-3 |
-| Feature baseline | Existing `feature/dependent-dropdown-filters`, `fa14da4`; implementation not yet committed |
+| Feature baseline | Existing `feature/dependent-dropdown-filters`, originally `fa14da4`; implementation commit `bd41e2f`; default `origin/20` at `cf54708` merged without conflicts in `0429dac` |
+| Post-merge tested source | `9bb479d`; three optional integration checks added, with no runtime implementation changes |
 
 Native CRM `partner_name` is text and `company_id` identifies the tenant, not a
 customer company. Native `user_id` limits internal users but not department
@@ -111,18 +114,26 @@ sales-team worktree was left untouched.
 | --- | --- |
 | Core-only fresh install, without CRM/HR | 7 authored tests pass (9 including framework tests); `/tmp/opencode/kpability-ddf-core.log` |
 | CRM/Contacts without HR | 19 authored tests pass; `/tmp/opencode/kpability-ddf-contacts-2.log` |
-| Full fresh Enterprise install | 27 authored tests pass (29 including framework tests); `/tmp/opencode/kpability-ddf-enterprise.log` |
-| Full final-code upgrade regression | 27 authored tests pass, zero failures/errors; `/tmp/opencode/kpability-ddf-final-tests-2.log` |
-| Existing-record installation and same-version upgrade | Both pass exact assignment/audit-field snapshots; `/tmp/opencode/kpability-ddf-lifecycle.json` |
-| Actual Brave remote-debugging evidence | 10 cases pass, engine `156.0.8078.80`, CDP transport and Brave identity recorded, no page JavaScript/console errors; see [evidence index](evidence/README.md) for screenshots/videos and retained network diagnostics |
+| Earlier full Enterprise regression | Before integration, 27 authored checks passed on fresh install and upgrade; `/tmp/opencode/kpability-ddf-enterprise.log`, `/tmp/opencode/kpability-ddf-final-tests-2.log` |
+| Post-merge combined fresh Enterprise install | 82 pass: 30 dropdown + 43 approved pipeline-category + 7 website + 2 framework checks; zero failures/errors; `/tmp/opencode/kpability-ddf-postmerge-fresh-final.log` |
+| Post-merge combined upgrade regression | 80 authored checks pass, zero failures/errors; `/tmp/opencode/kpability-ddf-postmerge-upgrade-final.log` |
+| Existing-record installation and same-version upgrade | Exact assignment/audit-field snapshots pass, including another post-merge upgrade; `/tmp/opencode/kpability-ddf-lifecycle.json`, `/tmp/opencode/kpability-ddf-postmerge-lifecycle-check.log` |
+| Post-merge actual Brave remote-debugging evidence | 10 cases pass at `/tmp/opencode/kpability-ddf-browser/20261115152849/`, engine `156.0.8078.80`, CDP transport and Brave identity recorded, no page JavaScript/console errors; [committed screenshots and results](evidence/README.md) |
 | Earlier bundled Chromium evidence | 5 cases pass on `158.0.8127.18`; historical evidence, not claimed as Brave testing |
 | Native-view/static checks | Native view validation and `git diff --check`; UI detector returned no findings before final access-group alignment |
 
 Final model-test log warnings are native missing optional `markdown2` rendering
 support; no remaining custom-view access inconsistency was reported. Earlier
 failing iterations are retained locally and are not passing evidence.
-The additional Brave work changed only the browser runner and documentation,
-not application code. It used the user's approved remote-debugging connection
+The integration added three tests for valid contact repair/category preservation,
+unchanged legacy contacts during category changes, and department validation
+alongside categorized Won/lost behavior. The first integration iteration expected
+Won → lost directly; native Odoo correctly rejects that transition. The corrected
+test asserts the guard and moves to an eligible stage before losing. No native
+workflow was changed to make tests pass.
+
+The additional verification changed tests and documentation, not runtime
+application code. It used the user's approved remote-debugging connection
 and new owned browser contexts against the same synthetic database. Existing
 tabs and browser settings were not inspected or changed.
 
@@ -140,23 +151,31 @@ MODULES=kpability_dependent_dropdown_filters,kpability_dependent_dropdown_crm_co
 TAGS=/kpability_dependent_dropdown_filters,/kpability_dependent_dropdown_crm_contacts,/kpability_dependent_dropdown_hr
 ```
 
-Final upgrade regression:
+Post-merge combined upgrade regression, including only the approved default
+branch's pipeline/website modules:
 
 ```bash
+COMBINED_MODULES="$MODULES,kpability_pipeline_categories,kpability_website_pipeline_categories"
+COMBINED_TAGS="$TAGS,/kpability_pipeline_categories,/kpability_website_pipeline_categories"
 "$PY" "$ODOO" --addons-path="$ADDONS" \
   --db_host=127.0.0.1 --db_port=55427 --db_user=odoo \
   --database=kpability_ddf_enterprise \
   --data-dir=/tmp/opencode/kpability-ddf-enterprise-data \
   --http-interface=127.0.0.1 --http-port=18043 \
-  --update="$MODULES" --test-enable --test-tags="$TAGS" \
-  --stop-after-init --logfile=/tmp/opencode/kpability-ddf-final-tests-2.log
+  --update="$COMBINED_MODULES" --without-demo=all \
+  --test-enable --test-tags="$COMBINED_TAGS" --stop-after-init \
+  --logfile=/tmp/opencode/kpability-ddf-postmerge-upgrade-final.log
 ```
 
-For a new disposable full installation, use `--init=web_enterprise,crm_enterprise,kpability_dependent_dropdown_hr`
-instead of `--update`, `--without-demo=True`, a **new** `kpability_ddf_*` database
-and its own data directory. Core-only installs initialize just the core module;
-CRM/Contacts initializes that adapter without HR. Do not share a running test
-server/database with an install/upgrade process.
+For the new combined fresh installation, use
+`--init=web_enterprise,crm_enterprise,workspace_management,kpability_dependent_dropdown_hr,kpability_website_pipeline_categories`
+instead of `--update`, the same combined tags, `--without-demo=all`, a **new**
+`kpability_ddf_*` database and its own data directory/HTTP port. The passing run
+used `kpability_ddf_combined_final`, data directory
+`/tmp/opencode/kpability-ddf-combined-final-data`, port `18047`, and log
+`/tmp/opencode/kpability-ddf-postmerge-fresh-final.log`. Core-only installs initialize
+just the core module; CRM/Contacts initializes that adapter without HR.
+Do not share a running test server/database with an install/upgrade process.
 
 Lifecycle script: native Enterprise CRM/Contacts/HR was installed first without
 these add-ons; then `tests/check_lifecycle.py` ran through `odoo-bin shell`
@@ -198,8 +217,10 @@ disconnects; it does not close the attached browser. The native application's
 effective desktop viewport was calibrated without changing the user's site zoom.
 
 Run Playwright separately from Odoo's environment to preserve Odoo's pinned
-`greenlet==3.0.3`. Evidence and synthetic credentials are deliberately not
-committed. The runner requires explicit opt-in, localhost and a synthetic
+`greenlet==3.0.3`. Synthetic credentials and raw videos/logs remain outside Git.
+Curated synthetic screenshots and a non-secret results manifest are published
+under the user's explicit feature-PR authorization. The runner requires explicit
+opt-in, localhost and a synthetic
 database name; fixture/lifecycle writers also check the dedicated database port.
 
 ## Acceptance coverage and remaining gates
@@ -212,7 +233,7 @@ database name; fixture/lifecycle writers also check the dedicated database port.
 | DDF-07–08 | Exact department/public mapping, no employee, archived employee, department rename/change, no cached membership, company mapping and private-HR denial | HR-owner privacy approval, additional portal/inactive-user/multiple-company employee fixtures |
 | DDF-09–10 | Native AND, company boundaries, backend create/write/RPC denial, no public bypass, unsupported catalog rejection, no creation shortcut on adapted forms | Import-tool UI, alternative widgets/views and external integration review |
 | DDF-11 | Fresh install, same-version upgrade, exact synthetic legacy/audit preservation; deactivation/reactivation verified in the native selector and unchanged legacy edit | Uninstall/restore rehearsal and activation-time production mismatch report |
-| DDF-12 | Core without CRM/HR; CRM/Contacts without HR; full native Enterprise | Combined approved category/team/stage modules and shared Save/Discard |
+| DDF-12 | Core without CRM/HR; CRM/Contacts without HR; full Enterprise plus approved pipeline/website categories; category/Won/lost, contact repair, unchanged legacy and department coexistence checks | Integration with unmerged team/stage modules and shared Save/Discard |
 
 The browser dataset contains two customer companies, 12 eligible direct contacts,
 one other-company contact and an archived contact, with two departments and two
@@ -236,11 +257,13 @@ Known compatibility boundaries:
   fixtures. Helper fields are internal-only; no new external configuration or
   HR read permissions are granted. Review external create/write routes before
   installing/activating in a client database.
-- This branch predates the current shared integration head. Rebase/merge onto an
-  agreed approved base and rerun combined regression before proposing release;
-  no sibling feature has been silently stacked.
+- The branch was updated against the fetched default `origin/20` at `cf54708`
+  without conflicts. Combined checks cover the approved category/website modules;
+  unmerged team/stage/shared-button work still requires its own integration pass.
 
 Independent maker/checker approval, approved HR access/legacy policy, Odoo.sh
-staging/UAT, backup/restore and separately authorized publication/deployment
+staging/UAT, backup/restore and separately authorized deployment
 remain mandatory. Do not treat a code rollback or uninstall as a tested database
-downgrade. No GitHub write, company activation, push, PR or deployment was made.
+downgrade. The user authorized this feature commit, push and PR, not a merge to
+`20`, company activation, client adoption or deployment. Reference PDFs remain
+outside the commit.

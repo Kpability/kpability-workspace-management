@@ -1,0 +1,199 @@
+{
+  "database": "kpability_ddf_enterprise",
+  "browser": "156.0.8078.80",
+  "transport": "remote-debugging-cdp",
+  "server_version": "20.0+e",
+  "cases": [
+    {
+      "case": "test_00_configuration_is_record_maintained_and_company_scoped",
+      "javascript_errors": [],
+      "console_errors": [],
+      "failed_requests": [],
+      "effective_viewport": {
+        "width": 1440,
+        "height": 1000,
+        "device_pixel_ratio": 1.399999976158142
+      },
+      "status": "passed",
+      "screenshot": "test_00_configuration_is_record_maintained_and_company_scoped.png",
+      "videos": [
+        "video/page@00c7d3dcde1d09b9131e7c6d5720aab2.webm"
+      ]
+    },
+    {
+      "case": "test_01_autocomplete_search_more_and_native_lead_reuse",
+      "javascript_errors": [],
+      "console_errors": [],
+      "failed_requests": [
+        {
+          "path": "/bus/websocket_worker_bundle",
+          "failure": "net::ERR_ABORTED"
+        }
+      ],
+      "effective_viewport": {
+        "width": 1440,
+        "height": 1000,
+        "device_pixel_ratio": 1.399999976158142
+      },
+      "status": "passed",
+      "screenshot": "test_01_autocomplete_search_more_and_native_lead_reuse.png",
+      "videos": [
+        "video/page@e3a775d3be558182bc0bba09e19f2f67.webm"
+      ]
+    },
+    {
+      "case": "test_02_stale_draft_explicit_repair_save_and_discard",
+      "javascript_errors": [],
+      "console_errors": [],
+      "failed_requests": [],
+      "effective_viewport": {
+        "width": 1440,
+        "height": 1000,
+        "device_pixel_ratio": 1.399999976158142
+      },
+      "status": "passed",
+      "screenshot": "test_02_stale_draft_explicit_repair_save_and_discard.png",
+      "videos": [
+        "video/page@df4ba8da3f3e951028ebbebb24e40659.webm"
+      ]
+    },
+    {
+      "case": "test_03_contacts_reuse_and_no_creation_shortcut",
+      "javascript_errors": [],
+      "console_errors": [],
+      "failed_requests": [],
+      "effective_viewport": {
+        "width": 1440,
+        "height": 1000,
+        "device_pixel_ratio": 1.399999976158142
+      },
+      "status": "passed",
+      "screenshot": "test_03_contacts_reuse_and_no_creation_shortcut.png",
+      "videos": [
+        "video/page@0be89d7b24d85ff03a75151c921d039b.webm"
+      ]
+    },
+    {
+      "case": "test_04_ordinary_salesperson_public_hr_and_backend_denials",
+      "javascript_errors": [],
+      "console_errors": [],
+      "failed_requests": [],
+      "effective_viewport": {
+        "width": 2016,
+        "height": 1400,
+        "device_pixel_ratio": 1
+      },
+      "status": "passed",
+      "screenshot": "test_04_ordinary_salesperson_public_hr_and_backend_denials.png",
+      "videos": [
+        "video/page@4ede98ae4ea4ef707441d1014df825f3.webm",
+        "video/page@8df9ee16e68785b9c06930631a08f12d.webm"
+      ]
+    },
+    {
+      "case": "test_05_missing_parent_and_empty_company_do_not_broaden_choices",
+      "javascript_errors": [],
+      "console_errors": [],
+      "failed_requests": [
+        {
+          "path": "/bus/websocket_worker_bundle",
+          "failure": "net::ERR_ABORTED"
+        }
+      ],
+      "effective_viewport": {
+        "width": 1440,
+        "height": 1000,
+        "device_pixel_ratio": 1.399999976158142
+      },
+      "status": "passed",
+      "screenshot": "test_05_missing_parent_and_empty_company_do_not_broaden_choices.png",
+      "videos": [
+        "video/page@81a71b5db62147b9f56d278eca087247.webm"
+      ]
+    },
+    {
+      "case": "test_06_department_configuration_changes_without_code",
+      "javascript_errors": [],
+      "console_errors": [],
+      "failed_requests": [
+        {
+          "path": "/bus/websocket_worker_bundle",
+          "failure": "net::ERR_ABORTED"
+        }
+      ],
+      "effective_viewport": {
+        "width": 1440,
+        "height": 1000,
+        "device_pixel_ratio": 1.399999976158142
+      },
+      "status": "passed",
+      "screenshot": "test_06_department_configuration_changes_without_code.png",
+      "videos": [
+        "video/page@f35b27f5fae3ca1b5d03f5f73cf82f0e.webm"
+      ]
+    },
+    {
+      "case": "test_07_deactivation_restores_native_choices_without_rewriting_history",
+      "javascript_errors": [],
+      "console_errors": [],
+      "failed_requests": [
+        {
+          "path": "/bus/websocket_worker_bundle",
+          "failure": "net::ERR_ABORTED"
+        }
+      ],
+      "effective_viewport": {
+        "width": 1440,
+        "height": 1000,
+        "device_pixel_ratio": 1.399999976158142
+      },
+      "status": "passed",
+      "screenshot": "test_07_deactivation_restores_native_choices_without_rewriting_history.png",
+      "videos": [
+        "video/page@3b9e59be547d9e8c0a7c6d27bc194d4f.webm"
+      ]
+    },
+    {
+      "case": "test_08_keyboard_selects_an_eligible_contact_without_creation",
+      "javascript_errors": [],
+      "console_errors": [],
+      "failed_requests": [],
+      "effective_viewport": {
+        "width": 1440,
+        "height": 1000,
+        "device_pixel_ratio": 1.399999976158142
+      },
+      "status": "passed",
+      "screenshot": "test_08_keyboard_selects_an_eligible_contact_without_creation.png",
+      "videos": [
+        "video/page@f1388d3d10bec3905307230362c3373f.webm"
+      ]
+    },
+    {
+      "case": "test_09_latest_parent_wins_while_an_older_onchange_is_in_flight",
+      "javascript_errors": [],
+      "console_errors": [],
+      "failed_requests": [],
+      "effective_viewport": {
+        "width": 1440,
+        "height": 1000,
+        "device_pixel_ratio": 1.399999976158142
+      },
+      "status": "passed",
+      "screenshot": "test_09_latest_parent_wins_while_an_older_onchange_is_in_flight.png",
+      "videos": [
+        "video/page@6a546bdd702324e85dbf4b45adbd152c.webm"
+      ]
+    }
+  ],
+  "brave_verified": true,
+  "initial_effective_viewport": {
+    "width": 1028.5714111328125,
+    "height": 714.2857055664062
+  },
+  "effective_viewport": {
+    "width": 1440,
+    "height": 1000,
+    "device_pixel_ratio": 1.399999976158142
+  }
+}
