@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="adapter_crm_sales_department" model="dropdown.adapter">
+        <field name="s_name">CRM: Department → Salesperson</field>
+        <field name="s_key">crm_sales_department</field>
+    </record>
+    <record id="adapter_contacts_sales_department" model="dropdown.adapter">
+        <field name="s_name">Contacts: Department → Salesperson</field>
+        <field name="s_key">contacts_sales_department</field>
+    </record>
+</odoo>

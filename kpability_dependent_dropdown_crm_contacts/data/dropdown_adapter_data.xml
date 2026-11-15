@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Catalog only: installation creates no business rules or assignments. -->
+    <record id="adapter_crm_customer_contact" model="dropdown.adapter">
+        <field name="s_name">CRM: Customer Company → Contact</field>
+        <field name="s_key">crm_customer_contact</field>
+    </record>
+    <record id="adapter_contacts_primary_contact" model="dropdown.adapter">
+        <field name="s_name">Contacts: Company → Primary Contact</field>
+        <field name="s_key">contacts_primary_contact</field>
+    </record>
+</odoo>

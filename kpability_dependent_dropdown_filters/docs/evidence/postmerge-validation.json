@@ -1,0 +1,61 @@
+{
+  "verified_date": "2026-11-15",
+  "branch": "feature/dependent-dropdown-filters",
+  "default_branch": "20",
+  "default_head": "cf54708dd35761c9a3e09d27a0bb2aa711f4b378",
+  "merge_commit": "0429dac",
+  "tested_source_commit": "9bb479d",
+  "source_sha256": "8c4051eb9250662eea0cd64b246797b7625c5e4b6915f32977a93c4123019a66",
+  "runtime_sha256": "6f42ab90be825514206fb558ec4dd9bec2e34a4dafdb76a011bcebae82fb0463",
+  "runtime_implementation_changed_during_integration": false,
+  "odoo": "20.0+e",
+  "community_source": "24f007f4f8a2dbdab05c1b4aecf48bd4e9c4251e",
+  "enterprise_source": "7773cfc038583d1b664491128424cd1904be946c",
+  "authored_tests": {
+    "dependent_dropdowns": 30,
+    "approved_pipeline_categories": 43,
+    "approved_website_pipeline_categories": 7
+  },
+  "upgrade": {
+    "database": "kpability_ddf_enterprise",
+    "passed": 80,
+    "failed": 0,
+    "errors": 0,
+    "local_log": "/tmp/opencode/kpability-ddf-postmerge-upgrade-final.log"
+  },
+  "fresh_install": {
+    "database": "kpability_ddf_combined_final",
+    "passed": 82,
+    "framework_cases_included": 2,
+    "failed": 0,
+    "errors": 0,
+    "local_log": "/tmp/opencode/kpability-ddf-postmerge-fresh-final.log"
+  },
+  "legacy_preservation": {
+    "database": "kpability_ddf_legacy",
+    "postmerge_upgrade_preserved": true,
+    "assignment_and_audit_fields_unchanged": true,
+    "seeded_filter_rules": 0,
+    "new_business_fields_blank": true,
+    "local_log": "/tmp/opencode/kpability-ddf-postmerge-lifecycle-check.log"
+  },
+  "browser": {
+    "name": "Brave",
+    "engine": "156.0.8078.80",
+    "transport": "remote-debugging-cdp",
+    "brave_identity_verified": true,
+    "passed": 10,
+    "failed": 0,
+    "duration_seconds": 28.997,
+    "javascript_errors": 0,
+    "console_errors": 0,
+    "retained_worker_navigation_aborts": 4,
+    "results_manifest": "browser-results.json",
+    "local_artifact_directory": "/tmp/opencode/kpability-ddf-browser/20261115152849"
+  },
+  "synthetic_records_only": true,
+  "company_database_accessed": false,
+  "reference_pdfs_committed": false,
+  "independent_checker_approved": false,
+  "production_activation_or_deployment_authorized": false
+}

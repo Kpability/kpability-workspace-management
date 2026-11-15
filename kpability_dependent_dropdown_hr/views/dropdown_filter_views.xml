@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="dropdown_filter_view_form_department" model="ir.ui.view">
+        <field name="name">dropdown.filters.form.department</field>
+        <field name="model">dropdown.filters</field>
+        <field name="inherit_id" ref="kpability_dependent_dropdown_filters.dropdown_filter_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//group[@name='adapter_configuration']" position="inside">
+                <field name="s_binding_key" invisible="1"/>
+                <field name="department_id"
+                       invisible="s_binding_key not in ['crm_sales_department', 'contacts_sales_department']"
+                       required="active and s_binding_key in ['crm_sales_department', 'contacts_sales_department']"
+                       options="{'no_create': True}"/>
+            </xpath>
+        </field>
+    </record>
+</odoo>
