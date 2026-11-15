@@ -190,3 +190,53 @@ class TestCompanyContact(TransactionCase):
     def test_sales_user_cannot_activate_rule(self):
         with self.assertRaises(AccessError):
             self.crm_rule.with_user(self.sales).write({"active": False})
+
+    def test_optional_pipeline_category_and_contact_validation_coexist(self):
+        if "crm.pipeline.category" not in self.env:
+            self.skipTest("Optional pipeline categories are not installed")
+        intake, won, outside = self.env["crm.stage"].create([
+            {"name": "DDF Combined Intake"},
+            {"name": "DDF Combined Won", "is_won": True},
+            {"name": "DDF Combined Outside"},
+        ])
+        category = self.env["crm.pipeline.category"].create({
+            "s_name": "DDF Combined Category", "company_id": self.company_a.id,
+            "stage_ids": [Command.set((intake | won).ids)],
+        })
+        lead = self._lead(pipeline_category_id=category.id, stage_id=intake.id)
+        lead.write({"customer_company_id": self.customer_b.id, "partner_id": self.person_b.id})
+        self.assertEqual(lead.pipeline_category_id, category)
+        self.assertEqual(lead.stage_id, intake)
+        with self.assertRaises(ValidationError), self.cr.savepoint():
+            lead.write({"stage_id": outside.id})
+        self.assertEqual(lead.stage_id, intake)
+        with self.assertRaises(ValidationError), self.cr.savepoint():
+            lead.write({"customer_company_id": self.customer_a.id})
+        self.assertEqual(lead.customer_company_id, self.customer_b)
+        lead.action_set_won()
+        self.assertEqual(lead.stage_id, won)
+        with self.assertRaises(ValidationError), self.cr.savepoint():
+            lead.action_set_lost()
+        self.assertEqual(lead.stage_id, won)
+        lead.write({"stage_id": intake.id})
+        lead.action_set_lost()
+        self.assertFalse(lead.active)
+        self.assertEqual(lead.partner_id, self.person_b)
+        self.assertEqual(lead.pipeline_category_id, category)
+
+    def test_optional_pipeline_change_preserves_unchanged_legacy_contact(self):
+        if "crm.pipeline.category" not in self.env:
+            self.skipTest("Optional pipeline categories are not installed")
+        stage = self.env["crm.stage"].create({"name": "DDF Legacy Combined Intake"})
+        category = self.env["crm.pipeline.category"].create({
+            "s_name": "DDF Legacy Combined", "company_id": self.company_a.id,
+            "stage_ids": [Command.set(stage.ids)],
+        })
+        self.crm_rule.active = False
+        lead = self._lead(customer_company_id=self.customer_b.id, stage_id=stage.id)
+        self.crm_rule.active = True
+        lead.write({"pipeline_category_id": category.id, "description": "Unrelated category change"})
+        self.assertEqual(lead.partner_id, self.person_a)
+        self.assertEqual(lead.customer_company_id, self.customer_b)
+        self.assertEqual(lead.pipeline_category_id, category)
+        self.assertIn("no longer matches", lead.s_dropdown_contact_hint)

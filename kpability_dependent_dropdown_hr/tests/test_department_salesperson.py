@@ -141,3 +141,28 @@ class TestDepartmentSalesperson(TransactionCase):
             "name": "DDF HR B draft", "company_id": self.company_b.id, "user_id": False,
         })
         self.assertEqual(self._choices(draft), self.tenant_b)
+
+    def test_optional_category_won_and_department_validation_coexist(self):
+        if "crm.pipeline.category" not in self.env:
+            self.skipTest("Optional pipeline categories are not installed")
+        intake, won = self.env["crm.stage"].create([
+            {"name": "DDF HR Combined Intake"},
+            {"name": "DDF HR Combined Won", "is_won": True},
+        ])
+        category = self.env["crm.pipeline.category"].create({
+            "s_name": "DDF HR Combined", "company_id": self.company_a.id,
+            "stage_ids": [Command.set((intake | won).ids)],
+        })
+        self.env.flush_all()
+        lead = self.env["crm.lead"].create({
+            "name": "DDF HR Combined Opportunity", "type": "opportunity",
+            "company_id": self.company_a.id, "user_id": self.eligible.id,
+            "pipeline_category_id": category.id, "stage_id": intake.id,
+        })
+        with self.assertRaises(ValidationError), self.cr.savepoint():
+            lead.write({"user_id": self.other.id})
+        self.assertEqual(lead.user_id, self.eligible)
+        self.assertEqual(lead.pipeline_category_id, category)
+        lead.action_set_won()
+        self.assertEqual(lead.stage_id, won)
+        self.assertEqual(lead.user_id, self.eligible)
