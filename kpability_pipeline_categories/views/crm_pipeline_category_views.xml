@@ -76,20 +76,9 @@
                             <field name="name" readonly="True"/>
                         </list>
                     </field>
-                    <notebook groups="sales_team.group_sale_manager">
-                        <page string="Incoming Email Addresses">
-                            <p class="text-muted">
-                                Create opportunities from these addresses, once per pipeline per incoming email.
-                            </p>
-                            <field name="alias_ids">
-                                <list editable="bottom">
-                                    <field name="alias_name" placeholder="enrollment"/>
-                                    <field name="alias_domain_id" options="{'no_create': True}"/>
-                                    <field name="alias_full_name" readonly="True"/>
-                                </list>
-                            </field>
-                        </page>
-                    </notebook>
+                    <!-- Keep the old inheritance anchor hidden until installed
+                         website companions have also completed their upgrade. -->
+                    <notebook name="retired_intake" invisible="True"/>
                 </sheet>
             </form>
         </field>

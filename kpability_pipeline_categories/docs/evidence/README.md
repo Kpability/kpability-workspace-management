@@ -1,5 +1,13 @@
 # Pipeline Categories: local visual evidence
 
+**Current cleanup:** [November 13 verification and two screenshots](intake-deferral-2026-11-13/README.md).
+The current category form has no website/email tabs; core scoped pipelines remain available.
+
+**Historical PR #4 evidence:** website and incoming-email intake were deferred
+on November 13 under [issue #6](https://github.com/Kpability/kpability-workspace-management/issues/6).
+PC-14 screenshots below show the earlier feature, not the current delivery.
+See the [cleanup verification](../pipeline-categories.md) for current scope.
+
 The earlier six-test navigation walkthrough remains in the
 [browser walkthrough and seven screenshots](manual-smoke-2026-11-11/README.md).
 All six passed; the invalid-move validation dialog is expected.

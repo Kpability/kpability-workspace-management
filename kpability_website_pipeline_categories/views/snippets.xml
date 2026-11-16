@@ -1,10 +1,10 @@
 <odoo>
-    <template id="snippets" inherit_id="website.snippets">
+    <template id="snippets" inherit_id="website.snippets" active="False">
         <xpath expr="//t[@t-snippet='website.s_website_form_info']" position="after">
-            <t t-snippet="kpability_website_pipeline_categories.pipeline_category_form"
-                string="CRM Pipeline Form" t-forbid-sanitize="form" group="contact_and_forms" label="Form">
-                <keywords>crm, pipeline, enrollment, sales, lead, opportunity, category, form, contact</keywords>
-            </t>
         </xpath>
     </template>
+    <!-- A template's active attribute applies only on installation, not update. -->
+    <record id="snippets" model="ir.ui.view">
+        <field name="active" eval="False"/>
+    </record>
 </odoo>

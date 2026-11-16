@@ -42,17 +42,6 @@ class CrmLead(models.Model):
             self.env["crm.pipeline.category"].browse(category_id)._check_assignable()
         return super().write(vals)
 
-    @api.model
-    def message_new(self, msg_dict, custom_values=None):
-        values = dict(custom_values or {})
-        category_id = values.get("pipeline_category_id")
-        if category_id:
-            category = self.env["crm.pipeline.category"].browse(category_id)
-            if category.company_id:
-                # Incoming mail has no assignee; use the category's current company.
-                values.setdefault("company_id", category.company_id.id)
-        return super().message_new(msg_dict, custom_values=values)
-
     @api.constrains("pipeline_category_id", "stage_id", "team_id", "company_id")
     def _check_pipeline_category_consistency(self):
         for lead in self:

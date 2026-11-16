@@ -1,9 +1,9 @@
 {
-    "name": "Kpability Website Pipeline Categories",
-    "version": "20.0.1.0.0",
-    "summary": "Let website visitors create CRM opportunities in one or more pipelines",
-    "description": "Publish a CRM form that lists the pipeline categories enabled for the current website. "
-    "One submission creates one opportunity per selected pipeline, preserving native website CRM behavior.",
+    "name": "Kpability Website Pipeline Categories (Retired)",
+    "version": "20.0.1.1.0",
+    "summary": "Upgrade compatibility only; website pipeline intake is deferred",
+    "description": "Retain existing website mappings and safely retire the website pipeline form. "
+    "This compatibility module does not offer pipeline intake. Follow-up work is tracked in issue #6.",
     "author": "Kpability",
     "category": "Website/Website",
     "license": "LGPL-3",
