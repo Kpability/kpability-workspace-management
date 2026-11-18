@@ -1,5 +1,15 @@
 # Development plan: Sales team pipeline categories
 
+> **Implementation update — November 13, 2026:** the approved team foundation is
+> now implemented in the root `kpability_sales_team_pipeline_categories` add-on.
+> See its [implementation and verification record](../../kpability_sales_team_pipeline_categories/docs/sales-team-pipeline-categories.md)
+> for the authoritative decisions, Odoo 20 baseline, results and release gates.
+> The text below is the preserved original proposal, not the current contract:
+> in particular all CRM history (not just active records) protects mappings,
+> shared categories/companyless teams follow the approved explicit policy, and
+> the inverse is read-only. PR #7 must merge through approved `20` before the
+> separately agreed website/email intake work; the user chose foundation first.
+
 | Item | Plan |
 | --- | --- |
 | Branch | `feature/sales-team-pipeline-categories` |
