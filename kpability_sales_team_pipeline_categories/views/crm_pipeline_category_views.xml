@@ -1,0 +1,12 @@
+<odoo>
+    <record id="crm_pipeline_category_view_form_sales_teams" model="ir.ui.view">
+        <field name="name">crm.pipeline.category.form.sales.teams</field>
+        <field name="model">crm.pipeline.category</field>
+        <field name="inherit_id" ref="kpability_pipeline_categories.crm_pipeline_category_view_form"/>
+        <field name="arch" type="xml">
+            <field name="s_description" position="after">
+                <field name="sales_team_ids" widget="many2many_tags" readonly="True" options="{'no_open': True}"/>
+            </field>
+        </field>
+    </record>
+</odoo>

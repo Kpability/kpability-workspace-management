@@ -1,0 +1,29 @@
+<odoo>
+    <record id="crm_team_view_form_pipeline_categories" model="ir.ui.view">
+        <field name="name">crm.team.form.pipeline.categories</field>
+        <field name="model">crm.team</field>
+        <field name="inherit_id" ref="crm.sales_team_form_view_in_crm"/>
+        <field name="arch" type="xml">
+            <xpath expr="//notebook" position="inside">
+                <page name="pipeline_categories" string="Pipeline Categories">
+                    <p class="text-muted">
+                        Map the categories this team may use. Empty means no new categorized assignments.
+                        Existing records are not reclassified. Used mappings cannot be removed, even for archived records.
+                    </p>
+                    <field name="pipeline_category_ids" widget="many2many_tags"
+                        options="{'no_create': True, 'no_open': True}"/>
+                </page>
+            </xpath>
+        </field>
+    </record>
+    <record id="crm_team_view_list_pipeline_categories" model="ir.ui.view">
+        <field name="name">crm.team.list.pipeline.categories</field>
+        <field name="model">crm.team</field>
+        <field name="inherit_id" ref="sales_team.crm_team_view_tree"/>
+        <field name="arch" type="xml">
+            <field name="name" position="after">
+                <field name="pipeline_category_ids" widget="many2many_tags" optional="hide"/>
+            </field>
+        </field>
+    </record>
+</odoo>

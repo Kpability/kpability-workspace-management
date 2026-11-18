@@ -1,0 +1,46 @@
+<odoo>
+    <record id="crm_lead_view_form_team_categories" model="ir.ui.view">
+        <field name="name">crm.lead.form.team.categories</field>
+        <field name="model">crm.lead</field>
+        <field name="inherit_id" ref="kpability_pipeline_categories.crm_lead_view_form_pipeline_category"/>
+        <field name="arch" type="xml">
+            <field name="pipeline_category_stage_ids" position="after">
+                <field name="pipeline_team_category_ids" invisible="True"/>
+            </field>
+        </field>
+    </record>
+    <record id="crm_quick_create_view_team_categories" model="ir.ui.view">
+        <field name="name">crm.lead.quick.create.team.categories</field>
+        <field name="model">crm.lead</field>
+        <field name="inherit_id" ref="kpability_pipeline_categories.crm_quick_create_view_pipeline_category"/>
+        <field name="arch" type="xml">
+            <field name="team_id" position="attributes">
+                <attribute name="invisible">False</attribute>
+                <attribute name="options">{'no_create': True, 'no_open': True}</attribute>
+            </field>
+            <field name="pipeline_category_id" position="before">
+                <field name="pipeline_team_category_ids" invisible="True"/>
+            </field>
+        </field>
+    </record>
+    <record id="crm_opportunity_view_list_team_categories" model="ir.ui.view">
+        <field name="name">crm.lead.list.opportunity.team.categories</field>
+        <field name="model">crm.lead</field>
+        <field name="inherit_id" ref="kpability_pipeline_categories.crm_opportunity_view_list_pipeline_category"/>
+        <field name="arch" type="xml">
+            <field name="pipeline_category_stage_ids" position="after">
+                <field name="pipeline_team_category_ids" column_invisible="True"/>
+            </field>
+        </field>
+    </record>
+    <record id="crm_lead_view_list_team_categories" model="ir.ui.view">
+        <field name="name">crm.lead.list.team.categories</field>
+        <field name="model">crm.lead</field>
+        <field name="inherit_id" ref="kpability_pipeline_categories.crm_lead_view_list_pipeline_category"/>
+        <field name="arch" type="xml">
+            <field name="pipeline_category_stage_ids" position="after">
+                <field name="pipeline_team_category_ids" column_invisible="True"/>
+            </field>
+        </field>
+    </record>
+</odoo>
