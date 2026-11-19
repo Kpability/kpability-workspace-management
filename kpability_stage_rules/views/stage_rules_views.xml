@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <record id="view_stage_rules_list" model="ir.ui.view">
+        <field name="name">stage.rules.list</field>
+        <field name="model">stage.rules</field>
+        <field name="arch" type="xml">
+            <list decoration-muted="not active">
+                <field name="s_name"/>
+                <field name="stage_id"/>
+                <field name="e_target_field"/>
+                <field name="group_id" optional="show"/>
+                <field name="company_id" groups="base.group_multi_company" optional="show"/>
+                <field name="active" widget="boolean" readonly="1"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_stage_rules_form" model="ir.ui.view">
+        <field name="name">stage.rules.form</field>
+        <field name="model">stage.rules</field>
+        <field name="arch" type="xml">
+            <form>
+                <sheet>
+                    <div class="oe_title">
+                        <label for="s_name"/>
+                        <h1><field name="s_name" placeholder="e.g. Request a closing date"/></h1>
+                    </div>
+                    <group>
+                        <group string="Applies To">
+                            <field name="stage_id" options="{'no_create': True, 'no_open': True}"/>
+                            <field name="e_target_field"/>
+                            <field name="group_id" string="User Group" placeholder="Everyone"
+                                   options="{'no_create': True, 'no_open': True}"/>
+                            <field name="company_id" groups="base.group_multi_company"
+                                   options="{'no_create': True, 'no_open': True}"/>
+                            <field name="active" widget="boolean_toggle"/>
+                        </group>
+                        <group string="Field Behavior">
+                            <field name="e_visibility"/>
+                            <field name="e_enabled"/>
+                            <field name="e_required"/>
+                        </group>
+                    </group>
+                    <group string="Condition"
+                           invisible="'when' not in [e_visibility, e_enabled, e_required]">
+                        <div class="text-muted" colspan="2">
+                            One condition applies to every option above that uses a condition.
+                        </div>
+                        <field name="e_condition_field"
+                               required="'when' in [e_visibility, e_enabled, e_required]"/>
+                        <field name="j_allowed_operators" invisible="1"/>
+                        <field name="e_operator" invisible="not e_condition_field"
+                               required="e_condition_field and 'when' in [e_visibility, e_enabled, e_required]"
+                               widget="filterable_selection" options="{'whitelist_fname': 'j_allowed_operators'}"/>
+                        <field name="e_priority" invisible="e_condition_field != 'priority' or not e_operator"
+                               required="e_condition_field == 'priority' and e_operator and 'when' in [e_visibility, e_enabled, e_required]"/>
+                        <field name="s_compare_text"
+                               invisible="e_condition_field != 'referred' or e_operator not in ['equals', 'not_equals']"
+                               required="e_condition_field == 'referred' and e_operator in ['equals', 'not_equals'] and 'when' in [e_visibility, e_enabled, e_required]"/>
+                        <field name="d_compare_date"
+                               invisible="e_condition_field != 'date_deadline' or e_operator not in ['equals', 'not_equals', 'before', 'after']"
+                               required="e_condition_field == 'date_deadline' and e_operator in ['equals', 'not_equals', 'before', 'after'] and 'when' in [e_visibility, e_enabled, e_required]"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_stage_rules_search" model="ir.ui.view">
+        <field name="name">stage.rules.search</field>
+        <field name="model">stage.rules</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="s_name"/>
+                <field name="stage_id"/>
+                <field name="e_target_field"/>
+                <filter name="active" string="Active" domain="[('active', '=', True)]"/>
+                <filter name="inactive" string="Inactive" domain="[('active', '=', False)]"/>
+                <group>
+                    <filter name="group_by_stage" string="Stage" context="{'group_by': 'stage_id'}"/>
+                    <filter name="group_by_company" string="Company"
+                            context="{'group_by': 'company_id'}" groups="base.group_multi_company"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_stage_rules" model="ir.actions.act_window">
+        <field name="name">Stage Rules</field>
+        <field name="res_model">stage.rules</field>
+        <field name="view_mode">list,form</field>
+        <field name="search_view_id" ref="view_stage_rules_search"/>
+        <field name="context">{'active_test': False}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Create a stage rule</p>
+            <p>Choose a stage and decide when a field is shown, editable, or required on the opportunity form.</p>
+        </field>
+    </record>
+
+    <menuitem id="menu_stage_rules" name="Stage Rules" parent="crm.crm_menu_config"
+              action="action_stage_rules" sequence="35" groups="sales_team.group_sale_manager"/>
+</odoo>
