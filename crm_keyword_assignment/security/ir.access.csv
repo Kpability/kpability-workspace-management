@@ -1,0 +1,3 @@
+id,name,model_id,group_id/id,operation,domain
+access_crm_keyword_assignment_manager,crm.keyword.assignment.manager,crm.keyword.assignment,sales_team.group_sale_manager,crud,
+access_ir_model_fields_crm_keyword_assignment,ir.model.fields.crm.keyword.assignment,ir.model.fields,sales_team.group_sale_manager,r,

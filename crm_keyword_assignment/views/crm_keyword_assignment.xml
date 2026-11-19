@@ -1,0 +1,50 @@
+<odoo>
+    <record id="crm_keyword_assignment_view_search" model="ir.ui.view">
+        <field name="name">crm.keyword.assignment.search</field>
+        <field name="model">crm.keyword.assignment</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="s_keyword"/>
+                <field name="field_id"/>
+                <field name="user_id"/>
+                <filter string="Archived" name="inactive" domain="[('active', '=', False)]"/>
+            </search>
+        </field>
+    </record>
+
+    <record id="crm_keyword_assignment_view_list" model="ir.ui.view">
+        <field name="name">crm.keyword.assignment.list</field>
+        <field name="model">crm.keyword.assignment</field>
+        <field name="arch" type="xml">
+            <list editable="bottom">
+                <field name="n_sequence" widget="handle"/>
+                <field name="field_id" options="{'no_create': True, 'no_open': True}"/>
+                <field name="e_comparison_type"/>
+                <field name="s_keyword"/>
+                <field name="user_id" widget="many2one_avatar_user"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="crm_keyword_assignment_action" model="ir.actions.act_window">
+        <field name="name">Keyword Assignment</field>
+        <field name="res_model">crm.keyword.assignment</field>
+        <field name="view_mode">list</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Create a Keyword Assignment Rule</p>
+            <p>
+                Assign a salesperson automatically when a lead field matches a keyword.
+                Rules are checked from top to bottom and the first match wins.
+            </p>
+        </field>
+    </record>
+
+    <menuitem
+            id="menu_crm_keyword_assignment"
+            name="Keyword Assignment"
+            parent="crm.menu_crm_config_lead"
+            action="crm_keyword_assignment_action"
+            groups="sales_team.group_sale_manager"
+            sequence="8"
+    />
+</odoo>
