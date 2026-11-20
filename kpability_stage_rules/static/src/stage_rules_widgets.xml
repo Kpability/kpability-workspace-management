@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+    <t t-name="kpability_stage_rules.FieldPicker">
+        <ModelFieldSelector resModel="'crm.lead'" path="this.props.record.data[this.props.name] || ''"
+                            allowEmpty="true" readonly="this.props.readonly"
+                            filter.bind="this.filter" followRelation="false" update.bind="this.update"/>
+    </t>
+    <t t-name="kpability_stage_rules.Condition">
+        <StageRulesDomainSelector t-if="this.choices.length" resModel="'crm.lead'" choices="this.choices"
+                                  domain="this.props.record.data[this.props.name] || '[]'"
+                                  readonly="this.props.readonly" update.bind="this.update"/>
+        <span t-else="" class="text-muted">No supported fields are available for this condition.</span>
+    </t>
+</templates>
