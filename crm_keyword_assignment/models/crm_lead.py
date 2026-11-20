@@ -13,9 +13,7 @@ class CrmLead(models.Model):
     def write(self, vals):
         res = super().write(vals)
         if "user_id" not in vals:
-            rules = self._get_keyword_assignment_rules()
-            if set(vals) & set(rules.field_id.mapped("name")):
-                self._apply_keyword_assignment(rules)
+            self._apply_keyword_assignment()
         return res
 
     def _get_keyword_assignment_rules(self):

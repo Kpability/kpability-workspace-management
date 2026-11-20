@@ -1,4 +1,5 @@
 from odoo import api, fields, models
+from odoo.tools.safe_eval import safe_eval
 
 SUPPORTED_FIELD_TYPES = ("char", "text", "selection", "many2one", "many2many")
 
@@ -40,6 +41,11 @@ class CrmKeywordAssignment(models.Model):
         string="Keywords",
         required=True,
     )
+    s_domain = fields.Char(
+        string="Condition",
+        help="Optional domain on the lead/opportunity. "
+             "If set, the record must match this domain before the rule assigns a salesperson.",
+    )
     user_id = fields.Many2one(
         "res.users",
         string="Salesperson",
@@ -72,8 +78,24 @@ class CrmKeywordAssignment(models.Model):
             return [labels.get(value) or ""]
         return [value or ""]
 
+    def _matches_domain(self, lead):
+        self.ensure_one()
+        if not self.s_domain or self.s_domain == "[]":
+            return True
+        try:
+            domain = safe_eval(self.s_domain, {
+                "uid": self.env.uid,
+                "user": self.env.user,
+                "context": dict(self.env.context),
+            })
+        except Exception:
+            return False
+        return bool(lead.filtered_domain(domain))
+
     def _matches(self, lead):
         self.ensure_one()
+        if not self._matches_domain(lead):
+            return False
         keywords = self._get_keywords()
         if not keywords:
             return False

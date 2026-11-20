@@ -26,6 +26,11 @@
                 <field name="e_comparison_type"/>
                 <field name="keyword_ids" widget="many2many_tags" options="{'no_open': True}"/>
                 <field name="user_id" widget="many2one_avatar_user"/>
+                <field
+                        name="s_domain"
+                        widget="domain"
+                        options="{'model': 'crm.lead', 'in_dialog': True, 'foldable': True}"
+                />
             </list>
         </field>
     </record>
@@ -41,6 +46,11 @@
                         <field name="e_comparison_type"/>
                         <field name="keyword_ids" widget="many2many_tags" options="{'no_open': True}"/>
                         <field name="user_id" widget="many2one_avatar_user"/>
+                        <field
+                                name="s_domain"
+                                widget="domain"
+                                options="{'model': 'crm.lead', 'in_dialog': True, 'foldable': True}"
+                        />
                     </group>
                 </sheet>
             </form>
@@ -55,8 +65,9 @@
         <field name="help" type="html">
             <p class="o_view_nocontent_smiling_face">Create a Keyword Assignment Rule</p>
             <p>
-                Assign a salesperson automatically when a lead field matches any keyword tag.
-                Rules are checked from top to bottom and the first match wins.
+                Assign a salesperson automatically when a lead field matches any keyword tag
+                and the optional Condition domain matches. Rules are checked from top to
+                bottom and the first match wins.
             </p>
         </field>
     </record>
