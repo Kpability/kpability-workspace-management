@@ -1,68 +1,70 @@
-import { serializeDate } from "@web/core/l10n/dates";
+import { Domain } from "@web/core/domain";
 
-export const TARGET_FIELDS = [
-    "date_deadline", "user_id", "campaign_id", "medium_id", "source_id", "referred",
-];
+const supportedTypes = new Set([
+    "boolean", "char", "date", "datetime", "float", "integer", "many2many",
+    "many2one", "monetary", "selection", "text",
+]);
+const scopeFields = new Set(["company_id", "id", "stage_id", "type"]);
 
-export function hasFieldValue(value) {
-    return value !== false && value != null && (typeof value !== "string" || value.trim() !== "");
+export function canTarget(name, type) {
+    return !scopeFields.has(name) && supportedTypes.has(type);
 }
 
-function matchesCondition(condition, data) {
-    if (!condition || !Object.hasOwn(data, condition.field_name)) {
-        return false;
+export function hasRequiredValue(value, type) {
+    if (["boolean", "float", "integer", "monetary"].includes(type)) {
+        return true; // Odoo provides a value (including false or zero) for these types.
     }
-    let value = data[condition.field_name];
-    const isSet = hasFieldValue(value);
-    if (condition.operator === "is_set") {
-        return isSet;
-    }
-    if (condition.operator === "is_not_set") {
-        return !isSet;
-    }
-    if (!isSet) {
-        return false;
-    }
-    if (condition.field_name === "date_deadline") {
-        value = serializeDate(value);
-    } else if (typeof value === "string") {
-        value = value.trim();
-    }
-    switch (condition.operator) {
-        case "equals":
-            return value === condition.value;
-        case "not_equals":
-            return value !== condition.value;
-        case "before":
-            return value < condition.value;
-        case "after":
-            return value > condition.value;
-        default:
-            return false;
-    }
+    return type === "many2many" ? Boolean(value?.count) : Boolean(value);
 }
 
-export function evaluateStageRules(rules, data, activeFields) {
+function evaluateBehavior(behavior, context, activeFields, fields) {
+    if (!behavior) {
+        return undefined;
+    }
+    if (behavior.mode !== "when") {
+        return true;
+    }
+    const values = {};
+    for (const term of behavior.domain) {
+        if (!Array.isArray(term)) {
+            continue;
+        }
+        const [name] = term;
+        if (!Object.hasOwn(activeFields, name) || !Object.hasOwn(context, name)) {
+            // Don't treat a field excluded from this view as an empty value.
+            return undefined;
+        }
+        const value = context[name];
+        const type = fields[name].type;
+        values[name] =
+            type === "many2many" && !value?.length ? false :
+            ["char", "text"].includes(type) && typeof value === "string" ? value.trim() || false :
+            value ?? false;
+    }
+    return new Domain(behavior.domain).contains(values);
+}
+
+export function evaluateStageRules(rules, context, activeFields, fields) {
     const invisible = new Set();
     const readonly = new Set();
     const required = new Set();
-    for (const rule of rules) {
-        const name = rule.field_name;
-        if (
-            !Object.hasOwn(activeFields, name) ||
-            (rule.condition && !Object.hasOwn(activeFields, rule.condition.field_name))
-        ) {
-            continue;
-        }
-        const matches = matchesCondition(rule.condition, data);
-        if (rule.visibility === "hidden" || (rule.visibility === "when" && !matches)) {
-            invisible.add(name);
-        }
-        if (rule.enabled === "disabled" || (rule.enabled === "when" && !matches)) {
-            readonly.add(name);
-        }
-        if (rule.required === "always" || (rule.required === "when" && matches)) {
-            required.add(name);
+    for (const { field_names, behaviors } of rules) {
+        const visible = evaluateBehavior(behaviors.visibility, context, activeFields, fields);
+        const editable = evaluateBehavior(behaviors.enabled, context, activeFields, fields);
+        const mandatory = evaluateBehavior(behaviors.required, context, activeFields, fields);
+        for (const name of field_names) {
+            if (!Object.hasOwn(activeFields, name) || !canTarget(name, fields[name].type)) {
+                continue;
+            }
+            if (visible !== undefined && (behaviors.visibility.mode === "hidden" || !visible)) {
+                invisible.add(name);
+            }
+            if (editable !== undefined && (behaviors.enabled.mode === "disabled" || !editable)) {
+                readonly.add(name);
+            }
+            if (mandatory) {
+                required.add(name);
+            }
         }
     }
     return {

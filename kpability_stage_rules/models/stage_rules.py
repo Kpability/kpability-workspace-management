@@ -1,23 +1,70 @@
+from ast import literal_eval
+from math import isfinite
+
 from odoo import api, fields, models
 from odoo.exceptions import ValidationError
+from odoo.fields import Domain
+
+from .stage_rules_field import SCOPE_FIELDS
 
 
-TARGET_FIELDS = (
-    "date_deadline", "user_id", "campaign_id", "medium_id", "source_id", "referred",
-)
-CONDITION_FIELDS = (
-    "priority", "date_deadline", "user_id", "campaign_id", "medium_id", "source_id", "referred",
-)
-PRESENCE_OPERATORS = {"is_set", "is_not_set"}
-COMPARISON_OPERATORS = {"equals", "not_equals"}
-DATE_OPERATORS = COMPARISON_OPERATORS | {"before", "after"}
+EQUALITY = {"=", "!="}
+MEMBERSHIP = {"in", "not in"}
+ORDERING = {"<", "<=", ">", ">="}
+TEXT_MATCH = {"ilike", "not ilike"}
+OPERATORS_BY_TYPE = {
+    "boolean": EQUALITY,
+    "char": EQUALITY | TEXT_MATCH,
+    "text": EQUALITY | TEXT_MATCH,
+    "selection": EQUALITY | MEMBERSHIP,
+    "date": EQUALITY | ORDERING,
+    "datetime": EQUALITY | ORDERING,
+    "float": EQUALITY | ORDERING,
+    "integer": EQUALITY | ORDERING,
+    "monetary": EQUALITY | ORDERING,
+    "many2one": EQUALITY | MEMBERSHIP,
+    "many2many": EQUALITY | MEMBERSHIP,
+}
+BEHAVIORS = ("visibility", "enabled", "required")
+
+
+def _valid_operand(field_type, operator, value):
+    if operator in MEMBERSHIP:
+        return (
+            isinstance(value, (list, tuple)) and len(value) <= 200
+            and all(
+                (type(item) is int and item > 0)
+                if field_type in {"many2one", "many2many"} else type(item) in {int, str}
+                for item in value
+            )
+        )
+    if value is False:
+        return operator in EQUALITY
+    if field_type == "boolean":
+        return type(value) is bool
+    if field_type in {"many2one", "many2many"}:
+        return type(value) is int and value > 0 and field_type != "many2many"
+    if field_type in {"integer", "float", "monetary"}:
+        return type(value) is int or type(value) is float and isfinite(value)
+    if field_type == "selection":
+        return type(value) in {int, str}
+    if not isinstance(value, str):
+        return False
+    if field_type in {"date", "datetime"}:
+        converter = fields.Date if field_type == "date" else fields.Datetime
+        try:
+            return converter.to_string(converter.to_date(value) if field_type == "date"
+                                       else converter.to_datetime(value)) == value
+        except (TypeError, ValueError):
+            return False
+    return True
 
 
 class StageRules(models.Model):
     _name = "stage.rules"
     _description = "CRM Opportunity Stage Rule"
     _rec_name = "s_name"
-    _order = "company_id, stage_id, s_name, id"
+    _order = "company_id, s_name, id"
 
     s_name = fields.Char(string="Rule Name", required=True)
     active = fields.Boolean(default=False, help="Only active rules apply to opportunities.")
@@ -25,167 +72,129 @@ class StageRules(models.Model):
         "res.company", required=True, default=lambda self: self.env.company, ondelete="cascade",
         help="The company on the opportunity, not the company selected in the top bar.",
     )
-    stage_id = fields.Many2one("crm.stage", required=True, ondelete="cascade")
-    group_id = fields.Many2one(
-        "res.groups", string="Applies To", ondelete="restrict",
-        help="Leave empty for everyone. Includes users who inherit the selected group.",
+    stage_ids = fields.Many2many("crm.stage", string="Stages", required=True, ondelete="restrict")
+    target_field_ids = fields.Many2many(
+        "stage.rules.field", string="Opportunity Fields", required=True, ondelete="restrict",
+        help="If a field is missing, type in the dropdown and choose Create and edit to register it.",
     )
-    e_target_field = fields.Selection(
-        selection="_selection_target_fields", string="Opportunity Field", required=True,
+    group_ids = fields.Many2many(
+        "res.groups", string="User Groups", ondelete="restrict",
+        help="Leave empty for everyone. Otherwise, users in any selected group qualify, including through implied membership.",
     )
     e_visibility = fields.Selection(
-        [
-            ("inherit", "Use Odoo default"),
-            ("hidden", "Hide"),
-            ("when", "Show only when the condition matches"),
-        ],
+        [("inherit", "Use Odoo default"), ("hidden", "Hide"), ("when", "Show only when the condition matches")],
         string="Visibility", required=True, default="inherit",
     )
     e_enabled = fields.Selection(
-        [
-            ("inherit", "Use Odoo default"),
-            ("disabled", "Read-only"),
-            ("when", "Editable only when the condition matches"),
-        ],
+        [("inherit", "Use Odoo default"), ("disabled", "Read-only"), ("when", "Editable only when the condition matches")],
         string="Editing", required=True, default="inherit",
     )
     e_required = fields.Selection(
-        [
-            ("inherit", "Use Odoo default"),
-            ("always", "Required"),
-            ("when", "Required when the condition matches"),
-        ],
+        [("inherit", "Use Odoo default"), ("always", "Required"), ("when", "Required when the condition matches")],
         string="Requirement", required=True, default="inherit",
     )
-    e_condition_field = fields.Selection(
-        selection="_selection_condition_fields", string="Condition Field",
-    )
-    e_operator = fields.Selection(
-        [
-            ("is_set", "Is set"),
-            ("is_not_set", "Is not set"),
-            ("equals", "Is equal to"),
-            ("not_equals", "Is not equal to"),
-            ("before", "Is before"),
-            ("after", "Is after"),
-        ],
-        string="Operator",
-    )
-    j_allowed_operators = fields.Json(compute="_compute_allowed_operators")
-    e_priority = fields.Selection(selection="_selection_priorities", string="Priority")
-    s_compare_text = fields.Char(string="Text")
-    d_compare_date = fields.Date(string="Date")
+    s_visibility_domain = fields.Text(string="Visibility condition")
+    s_enabled_domain = fields.Text(string="Editing condition")
+    s_required_domain = fields.Text(string="Requirement condition")
+    j_condition_fields = fields.Json(compute="_compute_condition_choices")
 
-    _unique_active_scope = models.UniqueIndex(
-        "(company_id, stage_id, e_target_field, group_id) NULLS NOT DISTINCT WHERE active",
-        "An active rule already exists for this company, stage, field, and audience.",
-    )
-
-    @api.model
-    def _selection_target_fields(self):
-        return self._crm_field_labels(TARGET_FIELDS)
-
-    @api.model
-    def _selection_condition_fields(self):
-        return self._crm_field_labels(CONDITION_FIELDS)
-
-    @api.model
-    def _crm_field_labels(self, field_names):
-        descriptions = self.env["crm.lead"].fields_get(field_names, ["string"])
-        return [(name, descriptions[name]["string"]) for name in field_names if name in descriptions]
-
-    @api.model
-    def _selection_priorities(self):
-        return self.env["crm.lead"].fields_get(["priority"], ["selection"])["priority"]["selection"]
-
-    @api.model
-    def _operators_for(self, condition_field):
-        if condition_field not in CONDITION_FIELDS:
-            return set()
-        if condition_field == "date_deadline":
-            return PRESENCE_OPERATORS | DATE_OPERATORS
-        if condition_field in {"referred", "priority"}:
-            return COMPARISON_OPERATORS | (PRESENCE_OPERATORS if condition_field == "referred" else set())
-        return PRESENCE_OPERATORS
-
-    @api.depends("e_condition_field")
-    def _compute_allowed_operators(self):
+    @api.depends("target_field_ids")
+    def _compute_condition_choices(self):
+        available = set(self.env["stage.rules.field"]._opportunity_fields()) - {"id", "type"}
         for rule in self:
-            rule.j_allowed_operators = sorted(rule._operators_for(rule.e_condition_field))
+            rule.j_condition_fields = {
+                "all": sorted(available),
+                "non_targets": sorted(available - set(rule.target_field_ids.mapped("s_field_name"))),
+            }
 
-    def _uses_condition(self):
-        self.ensure_one()
-        return "when" in (self.e_visibility, self.e_enabled, self.e_required)
-
-    @api.onchange("e_condition_field")
-    def _onchange_condition_field(self):
-        self.e_operator = (
-            "equals" if self.e_condition_field == "priority"
-            else "is_set" if self.e_condition_field else False
-        )
-        self.e_priority = False
-        self.s_compare_text = False
-        self.d_compare_date = False
-
-    @api.onchange("e_operator")
-    def _onchange_operator(self):
-        if self.e_operator in PRESENCE_OPERATORS:
-            self.e_priority = False
-            self.s_compare_text = False
-            self.d_compare_date = False
+    @api.model
+    def _condition_domain(self, domain_text):
+        if not domain_text or len(domain_text) > 8192:
+            raise ValidationError(self.env._("Add at least one condition for each conditional behavior."))
+        try:
+            terms = literal_eval(domain_text)
+            if not isinstance(terms, (tuple, list)) or not terms or len(terms) > 100:
+                raise ValueError
+            for term in terms:
+                if isinstance(term, str) and term in {"!", "|", "&"}:
+                    continue
+                if (
+                    not isinstance(term, (list, tuple)) or len(term) != 3
+                    or not isinstance(term[0], str) or not isinstance(term[1], str)
+                ):
+                    raise ValueError
+            # Validate the prefix structure without evaluating any configuration as code.
+            Domain(terms)
+        except (TypeError, ValueError, SyntaxError, RecursionError) as error:
+            raise ValidationError(self.env._("Enter a valid condition using the condition builder.")) from error
+        return terms
 
     @api.constrains(
-        "active", "e_target_field", "e_visibility", "e_enabled", "e_required",
-        "e_condition_field", "e_operator", "e_priority", "s_compare_text", "d_compare_date",
+        "active", "stage_ids", "target_field_ids", "e_visibility", "e_enabled", "e_required",
+        "s_visibility_domain", "s_enabled_domain", "s_required_domain",
     )
     def _check_rule_settings(self):
+        available_fields = None
         for rule in self:
+            if not rule.stage_ids or not rule.target_field_ids:
+                raise ValidationError(self.env._("Choose at least one stage and one opportunity field."))
+            modes = {behavior: rule[f"e_{behavior}"] for behavior in BEHAVIORS}
+            if rule.active and set(modes.values()) == {"inherit"}:
+                raise ValidationError(self.env._("Choose at least one change before activating this rule."))
             if rule.e_required != "inherit" and (
                 rule.e_visibility == "hidden" or rule.e_enabled == "disabled"
-                or (
-                    rule.e_required == "always"
-                    and "when" in (rule.e_visibility, rule.e_enabled)
-                )
             ):
-                raise ValidationError(self.env._(
-                    "Keep the field visible and editable whenever it is required. "
-                    "Change its visibility, editing, or requirement."
-                ))
-            if rule.active and {rule.e_visibility, rule.e_enabled, rule.e_required} == {"inherit"}:
-                raise ValidationError(self.env._("Choose at least one change before activating this rule."))
-            if not rule._uses_condition():
-                continue
-            if rule.e_condition_field == rule.e_target_field:
-                raise ValidationError(self.env._("Choose a different field for the condition."))
-            if rule.e_operator not in self._operators_for(rule.e_condition_field):
-                raise ValidationError(self.env._("Choose a condition field and an operator valid for that field."))
-            if rule.e_operator in PRESENCE_OPERATORS:
-                continue
-            if rule.e_condition_field == "priority" and not rule.e_priority:
-                raise ValidationError(self.env._("Choose the priority to compare."))
-            if rule.e_condition_field == "referred" and not (rule.s_compare_text or "").strip():
-                raise ValidationError(self.env._("Enter the text to compare."))
-            if rule.e_condition_field == "date_deadline" and not rule.d_compare_date:
-                raise ValidationError(self.env._("Enter the date to compare."))
+                raise ValidationError(self.env._("Do not always hide or lock a field that this rule requires."))
+            target_names = set(rule.target_field_ids.mapped("s_field_name"))
+            for behavior, mode in modes.items():
+                if mode != "when":
+                    continue
+                if available_fields is None:
+                    available_fields = self.env["stage.rules.field"]._opportunity_fields()
+                for term in rule._condition_domain(rule[f"s_{behavior}_domain"]):
+                    if isinstance(term, str):
+                        continue
+                    name, operator, operand = term
+                    field_type = available_fields.get(name, {}).get("type")
+                    is_self_restriction = behavior != "required" and name in target_names
+                    if (
+                        name in {"id", "type"}
+                        or operator not in OPERATORS_BY_TYPE.get(field_type, ())
+                        or not _valid_operand(field_type, operator, operand)
+                        or is_self_restriction
+                    ):
+                        raise ValidationError(self.env._(
+                            "Choose a supported CRM form field and comparison. Visibility and editing "
+                            "conditions cannot depend on a field that the same rule controls."
+                        ))
 
-    def _form_payload(self):
+    def _form_payload(self, readable_fields):
         self.ensure_one()
-        j_condition = False
-        if self._uses_condition():
-            j_condition = {"field_name": self.e_condition_field, "operator": self.e_operator}
-            if self.e_operator not in PRESENCE_OPERATORS:
-                if self.e_condition_field == "priority":
-                    j_condition["value"] = self.e_priority
-                elif self.e_condition_field == "date_deadline":
-                    j_condition["value"] = fields.Date.to_string(self.d_compare_date)
-                else:
-                    j_condition["value"] = self.s_compare_text.strip()
+        field_names = [
+            name for name in self.target_field_ids.mapped("s_field_name")
+            if name in readable_fields and name not in SCOPE_FIELDS
+        ]
+        if not field_names:
+            return None
+        behaviors = {}
+        for behavior in BEHAVIORS:
+            mode = self[f"e_{behavior}"]
+            if mode == "inherit":
+                continue
+            terms = self._condition_domain(self[f"s_{behavior}_domain"]) if mode == "when" else None
+            if terms and any(
+                not isinstance(term, str) and term[1] not in OPERATORS_BY_TYPE.get(
+                    readable_fields.get(term[0], {}).get("type"), ()
+                )
+                for term in terms
+            ):
+                continue
+            behaviors[behavior] = {"mode": mode, "domain": terms}
+        if not behaviors:
+            return None
         return {
             "company_id": self.company_id.id,
-            "stage_id": self.stage_id.id,
-            "field_name": self.e_target_field,
-            "visibility": self.e_visibility,
-            "enabled": self.e_enabled,
-            "required": self.e_required,
-            "condition": j_condition,
+            "stage_ids": self.stage_ids.ids,
+            "field_names": field_names,
+            "behaviors": behaviors,
         }

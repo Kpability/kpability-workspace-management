@@ -1,14 +1,29 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <odoo>
+    <record id="view_stage_rules_field_form" model="ir.ui.view">
+        <field name="name">stage.rules.field.form</field>
+        <field name="model">stage.rules.field</field>
+        <field name="arch" type="xml">
+            <form string="Register an opportunity field">
+                <group>
+                    <div colspan="2" class="text-muted">
+                        Choose a field that is already on the opportunity form. This only adds it to the Stage Rules dropdown.
+                    </div>
+                    <field name="s_field_name" widget="kpability_stage_field_picker" readonly="id"/>
+                </group>
+            </form>
+        </field>
+    </record>
+
     <record id="view_stage_rules_list" model="ir.ui.view">
         <field name="name">stage.rules.list</field>
         <field name="model">stage.rules</field>
         <field name="arch" type="xml">
             <list decoration-muted="not active">
                 <field name="s_name"/>
-                <field name="stage_id"/>
-                <field name="e_target_field"/>
-                <field name="group_id" optional="show"/>
+                <field name="stage_ids" widget="many2many_tags"/>
+                <field name="target_field_ids" widget="many2many_tags"/>
+                <field name="group_ids" widget="many2many_tags" optional="show"/>
                 <field name="company_id" groups="base.group_multi_company" optional="show"/>
                 <field name="active" widget="boolean" readonly="1"/>
             </list>
@@ -25,41 +40,36 @@
                         <label for="s_name"/>
                         <h1><field name="s_name" placeholder="e.g. Request a closing date"/></h1>
                     </div>
-                    <group>
-                        <group string="Applies To">
-                            <field name="stage_id" options="{'no_create': True, 'no_open': True}"/>
-                            <field name="e_target_field"/>
-                            <field name="group_id" string="User Group" placeholder="Everyone"
+                    <group string="Applies To">
+                        <group>
+                            <field name="stage_ids" widget="many2many_tags"
+                                   options="{'no_create': True}"/>
+                            <field name="target_field_ids" widget="many2many_tags"
+                                   options="{'no_quick_create': True}"
+                                   context="{'form_view_ref': 'kpability_stage_rules.view_stage_rules_field_form'}"/>
+                        </group>
+                        <group>
+                            <field name="group_ids" widget="many2many_tags" placeholder="Everyone"
                                    options="{'no_create': True, 'no_open': True}"/>
                             <field name="company_id" groups="base.group_multi_company"
                                    options="{'no_create': True, 'no_open': True}"/>
                             <field name="active" widget="boolean_toggle"/>
                         </group>
-                        <group string="Field Behavior">
-                            <field name="e_visibility"/>
-                            <field name="e_enabled"/>
-                            <field name="e_required"/>
-                        </group>
                     </group>
-                    <group string="Condition"
-                           invisible="'when' not in [e_visibility, e_enabled, e_required]">
-                        <div class="text-muted" colspan="2">
-                            One condition applies to every option above that uses a condition.
-                        </div>
-                        <field name="e_condition_field"
-                               required="'when' in [e_visibility, e_enabled, e_required]"/>
-                        <field name="j_allowed_operators" invisible="1"/>
-                        <field name="e_operator" invisible="not e_condition_field"
-                               required="e_condition_field and 'when' in [e_visibility, e_enabled, e_required]"
-                               widget="filterable_selection" options="{'whitelist_fname': 'j_allowed_operators'}"/>
-                        <field name="e_priority" invisible="e_condition_field != 'priority' or not e_operator"
-                               required="e_condition_field == 'priority' and e_operator and 'when' in [e_visibility, e_enabled, e_required]"/>
-                        <field name="s_compare_text"
-                               invisible="e_condition_field != 'referred' or e_operator not in ['equals', 'not_equals']"
-                               required="e_condition_field == 'referred' and e_operator in ['equals', 'not_equals'] and 'when' in [e_visibility, e_enabled, e_required]"/>
-                        <field name="d_compare_date"
-                               invisible="e_condition_field != 'date_deadline' or e_operator not in ['equals', 'not_equals', 'before', 'after']"
-                               required="e_condition_field == 'date_deadline' and e_operator in ['equals', 'not_equals', 'before', 'after'] and 'when' in [e_visibility, e_enabled, e_required]"/>
+                    <group string="Field Behavior">
+                        <field name="j_condition_fields" invisible="1"/>
+                        <field name="e_visibility"/>
+                        <field name="s_visibility_domain" widget="kpability_stage_condition"
+                               nolabel="1" colspan="2" invisible="e_visibility != 'when'"
+                               required="e_visibility == 'when'"/>
+                        <field name="e_enabled"/>
+                        <field name="s_enabled_domain" widget="kpability_stage_condition"
+                               nolabel="1" colspan="2" invisible="e_enabled != 'when'"
+                               required="e_enabled == 'when'"/>
+                        <field name="e_required"/>
+                        <field name="s_required_domain" widget="kpability_stage_condition"
+                               options="{'allow_targets': True}" nolabel="1" colspan="2"
+                               invisible="e_required != 'when'" required="e_required == 'when'"/>
                     </group>
                 </sheet>
             </form>
@@ -72,12 +82,11 @@
         <field name="arch" type="xml">
             <search>
                 <field name="s_name"/>
-                <field name="stage_id"/>
-                <field name="e_target_field"/>
+                <field name="stage_ids"/>
+                <field name="target_field_ids"/>
                 <filter name="active" string="Active" domain="[('active', '=', True)]"/>
                 <filter name="inactive" string="Inactive" domain="[('active', '=', False)]"/>
                 <group>
-                    <filter name="group_by_stage" string="Stage" context="{'group_by': 'stage_id'}"/>
                     <filter name="group_by_company" string="Company"
                             context="{'group_by': 'company_id'}" groups="base.group_multi_company"/>
                 </group>
@@ -93,7 +102,7 @@
         <field name="context">{'active_test': False}</field>
         <field name="help" type="html">
             <p class="o_view_nocontent_smiling_face">Create a stage rule</p>
-            <p>Choose a stage and decide when a field is shown, editable, or required on the opportunity form.</p>
+            <p>Choose which stages and fields the rule applies to, then set when the fields are shown, editable, or required.</p>
         </field>
     </record>
 

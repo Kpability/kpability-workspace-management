@@ -2,11 +2,10 @@ import "@crm/views/crm_form/crm_form";
 import { _t } from "@web/core/l10n/translation";
 import { evaluateBooleanExpr } from "@web/core/py_js/py";
 import { registry } from "@web/core/registry";
-import { TARGET_FIELDS, evaluateStageRules, hasFieldValue } from "./stage_rules";
+import { canTarget, evaluateStageRules, hasRequiredValue } from "./stage_rules";
 
 const views = registry.category("views");
 const crmForm = views.get("crm_form");
-const targetFields = new Set(TARGET_FIELDS);
 const stageKey = (companyId, stageId) => `${companyId}:${stageId}`;
 
 function addRestriction(nativeModifier, fieldName, state) {
@@ -22,12 +21,19 @@ class StageRulesArchParser extends crmForm.ArchParser {
         // Compose static, code-owned modifiers into this CRM form only. Neither
         // field names supplied by configuration nor condition operands become code.
         const arch = xmlDoc.cloneNode(true);
-        for (const node of arch.querySelectorAll("field[name], label[for]")) {
-            if (node.parentElement.closest("field")) {
-                continue;
+        const fields = models[modelName].fields;
+        const formNodes = [...arch.querySelectorAll("field[name], label[for]")]
+            .filter((node) => !node.parentElement.closest("field"));
+        const fieldNamesById = new Map();
+        for (const node of formNodes) {
+            if (node.localName === "field" && node.hasAttribute("id")) {
+                fieldNamesById.set(node.getAttribute("id"), node.getAttribute("name"));
             }
-            const fieldName = node.getAttribute("name") || node.getAttribute("for");
-            if (targetFields.has(fieldName)) {
+        }
+        for (const node of formNodes) {
+            const labelFor = node.getAttribute("for");
+            const fieldName = node.getAttribute("name") || fieldNamesById.get(labelFor) || labelFor;
+            if (Object.hasOwn(fields, fieldName) && canTarget(fieldName, fields[fieldName].type)) {
                 node.setAttribute(
                     "invisible",
                     addRestriction(node.getAttribute("invisible"), fieldName, "invisible")
@@ -36,7 +42,7 @@ class StageRulesArchParser extends crmForm.ArchParser {
         }
         const archInfo = super.parse(arch, models, modelName);
         for (const fieldInfo of Object.values(archInfo.fieldNodes)) {
-            if (targetFields.has(fieldInfo.name)) {
+            if (canTarget(fieldInfo.name, fields[fieldInfo.name].type)) {
                 for (const modifier of ["readonly", "required"]) {
                     fieldInfo[modifier] = addRestriction(fieldInfo[modifier], fieldInfo.name, modifier);
                 }
@@ -51,7 +57,8 @@ class StageRulesRecord extends crmForm.Model.Record {
         if (this.resModel !== "crm.lead" || this.data.type !== "opportunity") {
             return [];
         }
-        return this.model.stageRules.get(stageKey(company?.id, stage?.id)) || [];
+        const rules = this.model.stageRules.get(stageKey(company?.id, stage?.id)) || [];
+        return rules.filter((rule) => rule.field_names.some((name) => Object.hasOwn(this.activeFields, name)));
     }
 
     get hasPendingStageChange() {
@@ -64,7 +71,9 @@ class StageRulesRecord extends crmForm.Model.Record {
 
     _setEvalContext() {
         super._setEvalContext();
-        const states = evaluateStageRules(this.getStageRules(), this.data, this.activeFields);
+        const states = evaluateStageRules(
+            this.getStageRules(), this.evalContextWithVirtualIds, this.activeFields, this.fields
+        );
         Object.assign(this.evalContext, states);
         Object.assign(this.evalContextWithVirtualIds, states);
     }
@@ -74,7 +83,7 @@ class StageRulesRecord extends crmForm.Model.Record {
         // subsequent draft change locks a field, keep that edit in the save payload
         // while still honoring Odoo's original write filtering.
         const readonly = this.activeFields[fieldName].readonly;
-        if (!targetFields.has(fieldName) || !readonly) {
+        if (!canTarget(fieldName, this.fields[fieldName].type) || !readonly) {
             return super._isReadonly(fieldName);
         }
         return evaluateBooleanExpr(readonly, {
@@ -87,7 +96,7 @@ class StageRulesRecord extends crmForm.Model.Record {
         // An untouched existing record should still be able to use its native
         // actions (for example, open the Won Reasons wizard).
         const required = this.activeFields[fieldName].required;
-        if (this.dirty || this.isNew || !targetFields.has(fieldName) || !required) {
+        if (this.dirty || this.isNew || !canTarget(fieldName, this.fields[fieldName].type) || !required) {
             return super._isRequired(fieldName);
         }
         return evaluateBooleanExpr(required, {
@@ -130,9 +139,20 @@ class StageRulesRecord extends crmForm.Model.Record {
             return false;
         }
         if (this.dirty || this.isNew) {
-            const { kpability_stage_required, kpability_stage_readonly } = this.evalContextWithVirtualIds;
-            const blockedFields = kpability_stage_required.filter((name) =>
-                !hasFieldValue(this.data[name]) &&
+            const { kpability_stage_required, kpability_stage_readonly, kpability_stage_invisible } =
+                this.evalContextWithVirtualIds;
+            const originallyVisible = (name) => {
+                const invisible = this.activeFields[name].invisible;
+                return !invisible || !evaluateBooleanExpr(invisible, {
+                    ...this.evalContextWithVirtualIds,
+                    kpability_stage_invisible: [],
+                });
+            };
+            const blockedFields = [...new Set([
+                ...kpability_stage_required, ...kpability_stage_readonly, ...kpability_stage_invisible,
+            ])].filter((name) =>
+                this._isRequired(name) && !hasRequiredValue(this.data[name], this.fields[name].type) &&
+                (kpability_stage_required.includes(name) || originallyVisible(name)) &&
                 (this._isInvisible(name) || this._isReadonly(name) || kpability_stage_readonly.includes(name))
             );
             if (blockedFields.length) {
@@ -169,10 +189,12 @@ class StageRulesModel extends crmForm.Model {
         });
         const rulesByStage = new Map();
         for (const rule of rules) {
-            const key = stageKey(rule.company_id, rule.stage_id);
-            const stageRules = rulesByStage.get(key) || [];
-            stageRules.push(rule);
-            rulesByStage.set(key, stageRules);
+            for (const stageId of rule.stage_ids) {
+                const key = stageKey(rule.company_id, stageId);
+                const stageRules = rulesByStage.get(key) || [];
+                stageRules.push(rule);
+                rulesByStage.set(key, stageRules);
+            }
         }
         this.rulesByRecordData.set(data, rulesByStage);
         return data;

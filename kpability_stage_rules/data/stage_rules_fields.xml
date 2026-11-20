@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo noupdate="1">
+    <record id="field_date_deadline" model="stage.rules.field">
+        <field name="s_field_name">date_deadline</field>
+    </record>
+    <record id="field_user_id" model="stage.rules.field">
+        <field name="s_field_name">user_id</field>
+    </record>
+    <record id="field_campaign_id" model="stage.rules.field">
+        <field name="s_field_name">campaign_id</field>
+    </record>
+    <record id="field_medium_id" model="stage.rules.field">
+        <field name="s_field_name">medium_id</field>
+    </record>
+    <record id="field_source_id" model="stage.rules.field">
+        <field name="s_field_name">source_id</field>
+    </record>
+    <record id="field_referred" model="stage.rules.field">
+        <field name="s_field_name">referred</field>
+    </record>
+</odoo>
