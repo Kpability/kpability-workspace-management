@@ -1,6 +1,6 @@
 # Stage Rules verification evidence
 
-Screenshots are from a passing local Odoo 20 Enterprise run in Brave (Chromium `156.0.8078.80`) via Playwright `1.65.0` over remote debugging. All records shown are synthetic. All eight browser cases passed in both editions; Community ran without the optional Pipeline Categories and Won Reasons modules. Annotated copies add red circles and arrows; the originals are linked below. See the [verification guide](../stage-rules.md#verification) for the exact Odoo builds and commands.
+Screenshots are from passing local Odoo 20 Enterprise runs in Brave (Chromium `156.0.8078.80`) via Playwright `1.65.0` over remote debugging. All records shown are synthetic. All eight browser cases passed in both editions, and the Apps description was retested on both after restoring the scope note. Community ran without the optional Pipeline Categories and Won Reasons modules. Annotated copies add red circles and arrows; the originals are linked below. See the [verification guide](../stage-rules.md#verification) for the exact Odoo builds and commands.
 
 | Case | Passed checks | Screenshots |
 | --- | --- | --- |
@@ -11,7 +11,7 @@ Screenshots are from a passing local Odoo 20 Enterprise run in Brave (Chromium `
 | SR-05 · Native compatibility | An unconfigured stage retains native autosave before Lost. With merged Pipeline Categories and Won Reasons installed, submitting the Won wizard saves the selected reason, moves to the mapped Won stage, and preserves Expected Closing. | [Unconfigured form](06-unconfigured-stage-is-native.png) · [Won reason selected](03-merged-won-reasons-wizard.png) |
 | SR-06 · Independent conditions | A standard field and a registered custom field respond to separate Visibility, Editing, and Requirement conditions with unsaved Campaign, Medium, and Source values. | [Both fields required](08-registered-field-and-independent-conditions.png) · [Annotated](annotated/SR06-live-conditions.png) |
 | SR-07 · Native field modifiers | Native read-only still prevents editing, and a stage rule cannot bypass a native requirement by hiding an empty field. Save explains the conflict and preserves the draft. | [Read-only field](09a-native-readonly-still-applies.png) · [Native requirement warning](09-hidden-native-required-field-blocks-save.png) · Annotated: [read-only](annotated/SR07-native-readonly.png), [required](annotated/SR07-native-required.png) |
-| SR-08 · Apps description | The Apps description has one native title, a short overview, and four setup steps, without a second title, example, or development link. | [Apps description](10-apps-description-setup-only.png) · [Annotated](annotated/SR08-apps-description.png) |
+| SR-08 · Apps description | The Apps description has one native title, a short overview, four setup steps, and the opportunity-form scope note. It has no duplicate title, example, or development link. | [Apps description](10-apps-description-setup-and-scope.png) · [Annotated](annotated/SR08-apps-description.png) |
 
 **Model tests:** 7/7 Stage Rules cases passed on Community and Enterprise. Cases cover existing-field registration, typed condition validation, inactive configuration, company and effective group scoping, manager-only configuration, and unchanged direct opportunity writes.
 

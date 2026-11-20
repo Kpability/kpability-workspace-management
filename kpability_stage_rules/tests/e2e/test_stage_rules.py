@@ -282,7 +282,7 @@ class StageRulesBrowserTests(unittest.TestCase):
     def capture(self, page, name):
         page.screenshot(path=str(self.output / f"{name}.png"), full_page=True, animations="disabled")
 
-    def test_apps_description_shows_only_setup(self):
+    def test_apps_description_keeps_setup_and_scope(self):
         [module] = self.call("ir.module.module", "search_read", [[
             ["name", "=", "kpability_stage_rules"],
         ]], fields=["id"])
@@ -290,10 +290,14 @@ class StageRulesBrowserTests(unittest.TestCase):
         description = page.locator(".o_field_widget[name='description_html']")
         expect(description.get_by_text("Configure what people see", exact=False)).to_be_visible()
         expect(description.locator("li")).to_have_count(4)
+        expect(description.get_by_text(
+            "Rules apply only to the opportunity form, not to kanban, imports, automation, or API writes.",
+            exact=False,
+        )).to_be_visible()
         expect(description).not_to_contain_text("# Stage Rules")
         expect(description).not_to_contain_text("For example")
         expect(description).not_to_contain_text("Stage Rules development and testing")
-        self.capture(page, "10-apps-description-setup-only")
+        self.capture(page, "10-apps-description-setup-and-scope")
 
     def test_stage_preview_required_save_discard_and_native_won(self):
         lead = self.opportunity(self.intake, priority="3", campaign_id=self.campaign)
