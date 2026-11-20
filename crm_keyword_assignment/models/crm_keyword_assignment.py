@@ -1,4 +1,4 @@
-from odoo import fields, models
+from odoo import api, fields, models
 
 SUPPORTED_FIELD_TYPES = ("char", "text", "selection", "many2one", "many2many")
 
@@ -7,7 +7,6 @@ class CrmKeywordAssignment(models.Model):
     _name = "crm.keyword.assignment"
     _description = "CRM Keyword Assignment Rule"
     _order = "n_sequence, id"
-    _rec_name = "s_keyword"
 
     n_sequence = fields.Integer("Sequence", default=10)
     active = fields.Boolean(default=True)
@@ -33,13 +32,35 @@ class CrmKeywordAssignment(models.Model):
         required=True,
         default="contains",
     )
-    s_keyword = fields.Char("Keyword", required=True)
+    keyword_ids = fields.Many2many(
+        "crm.keyword",
+        "crm_keyword_assignment_keyword_rel",
+        "assignment_id",
+        "keyword_id",
+        string="Keywords",
+        required=True,
+    )
     user_id = fields.Many2one(
         "res.users",
         string="Salesperson",
         required=True,
         domain=[("share", "=", False)],
     )
+
+    @api.depends("keyword_ids.s_name")
+    def _compute_display_name(self):
+        for record in self:
+            record.display_name = ", ".join(record.keyword_ids.mapped("s_name")) or record.env._(
+                "Keyword Rule"
+            )
+
+    def _get_keywords(self):
+        self.ensure_one()
+        return [
+            name.strip().lower()
+            for name in self.keyword_ids.mapped("s_name")
+            if name and name.strip()
+        ]
 
     def _get_lead_values(self, lead):
         field_name = self.field_id.name
@@ -53,11 +74,18 @@ class CrmKeywordAssignment(models.Model):
 
     def _matches(self, lead):
         self.ensure_one()
-        keyword = self.s_keyword.strip().lower()
-        return bool(keyword) and any(
-            self._compare(value.strip().lower(), keyword)
+        keywords = self._get_keywords()
+        if not keywords:
+            return False
+        values = [
+            value.strip().lower()
             for value in self._get_lead_values(lead)
             if value
+        ]
+        return any(
+            self._compare(value, keyword)
+            for value in values
+            for keyword in keywords
         )
 
     def _compare(self, value, keyword):
