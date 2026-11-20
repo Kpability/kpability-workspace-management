@@ -7,7 +7,12 @@ class CrmLead(models.Model):
     @api.model_create_multi
     def create(self, vals_list):
         leads = super().create(vals_list)
-        leads._apply_keyword_assignment()
+        to_assign = self.browse([
+            lead.id
+            for lead, vals in zip(leads, vals_list)
+            if not vals.get("user_id")
+        ])
+        to_assign._apply_keyword_assignment()
         return leads
 
     def write(self, vals):

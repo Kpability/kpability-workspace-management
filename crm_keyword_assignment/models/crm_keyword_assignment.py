@@ -1,4 +1,5 @@
 from odoo import api, fields, models
+from odoo.exceptions import ValidationError
 from odoo.tools.safe_eval import safe_eval
 
 SUPPORTED_FIELD_TYPES = ("char", "text", "selection", "many2one", "many2many")
@@ -53,6 +54,21 @@ class CrmKeywordAssignment(models.Model):
         domain=[("share", "=", False)],
     )
 
+    @api.constrains("field_id")
+    def _check_field_id(self):
+        for rule in self:
+            field = rule.field_id
+            if (
+                not field
+                or field.model != "crm.lead"
+                or not field.store
+                or field.ttype not in SUPPORTED_FIELD_TYPES
+            ):
+                raise ValidationError(self.env._(
+                    "Keyword Assignment only supports stored char, text, selection, "
+                    "many2one, or many2many fields on Lead/Opportunity."
+                ))
+
     @api.depends("keyword_ids.s_name")
     def _compute_display_name(self):
         for record in self:
@@ -69,6 +85,9 @@ class CrmKeywordAssignment(models.Model):
         ]
 
     def _get_lead_values(self, lead):
+        self.ensure_one()
+        if self.field_id.ttype not in SUPPORTED_FIELD_TYPES:
+            return []
         field_name = self.field_id.name
         value = lead[field_name]
         if self.field_id.ttype in ("many2one", "many2many"):
@@ -76,7 +95,9 @@ class CrmKeywordAssignment(models.Model):
         if self.field_id.ttype == "selection":
             labels = dict(lead._fields[field_name]._description_selection(self.env))
             return [labels.get(value) or ""]
-        return [value or ""]
+        if not isinstance(value, str):
+            return []
+        return [value]
 
     def _matches_domain(self, lead):
         self.ensure_one()
