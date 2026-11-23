@@ -51,18 +51,19 @@ native team permissions and the base category record rules remain authoritative.
 
 ## Intake dependency gate
 
-This delivery implements the **team foundation only**, as explicitly selected
-on November 13, 2026 while PR #7 awaits review/merge. It neither restores nor
-redesigns website/email intake. The approved `20` baseline (merged PR #4) still
-contains its original intake code; this consumer cannot claim to disable it.
-Do not enable that legacy categorized intake with this stricter consumer without
-explicit valid team mappings. The separately reviewed cleanup must land first.
+This delivery implements the **team foundation only**. Merged PR #4 provides
+the category dependency, so review can proceed independently of
+[PR #7](https://github.com/Kpability/kpability-workspace-management/pull/7).
+The original categorized website/email intake can create records without a
+mapped team; this add-on does not disable those routes. **Do not enable this
+add-on alongside legacy categorized intake.** For rollout, wait for PR #7 to
+merge through `20`, apply its retirement upgrades (do not uninstall the legacy
+companion), and smoke-test the resulting staging build before enabling.
 
-After PR #7 is approved and merged through `20`, the agreed follow-up is optional
-`kpability_pipeline_email_intake` and `kpability_website_pipeline_intake` add-ons:
-explicit website/category/team routes, company/team/category email deduplication,
-opportunities-only custom intake, and opt-in legacy recovery. Neither add-on is
-implemented or installed here. Issue #6 remains open.
+Optional replacement website/email add-ons and explicit recovery of legacy
+configuration remain separate work tracked in
+[issue #6](https://github.com/Kpability/kpability-workspace-management/issues/6);
+they are not part of this add-on or a prerequisite for the team foundation.
 
 See [implementation and verification](docs/sales-team-pipeline-categories.md)
 for source baselines, commands, case coverage and outstanding release gates.

@@ -25,6 +25,7 @@ class SalesTeamPipelineBrowserTests(unittest.TestCase):
                 or urlparse(cls.url).hostname not in {"127.0.0.1", "localhost", "::1"}
                 or not cls.database.startswith("kpability_pipeline_stpc_")):
             raise unittest.SkipTest("Explicit opt-in and a disposable localhost kpability_pipeline_stpc_* DB are required")
+        cls.debug_assets = os.environ.get("ODOO_E2E_DEBUG_ASSETS") == "1"
         cls.run_id = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S")
         cls.output = Path(os.environ.get("ODOO_E2E_ARTIFACTS", "/tmp/opencode/kpability-stpc-browser")) / cls.run_id
         cls.output.mkdir(parents=True, exist_ok=False)
@@ -38,11 +39,14 @@ class SalesTeamPipelineBrowserTests(unittest.TestCase):
         assert session["server_version"].startswith("20.0+e"), "Odoo 20 Enterprise is required"
         cls.uid, cls.user_context = session["uid"], session["user_context"]
         cls.company = session["user_companies"]["current_company"]
-        modules = ["web_enterprise", "crm_enterprise", "kpability_pipeline_categories",
-                   "kpability_sales_team_pipeline_categories"]
-        assert len(cls.call("ir.module.module", "search", [[
-            ["name", "in", modules], ["state", "=", "installed"],
-        ]])) == 4
+        required = {"web_enterprise", "crm_enterprise", "kpability_pipeline_categories",
+                    "kpability_sales_team_pipeline_categories"}
+        module_records = cls.call("ir.module.module", "search_read", [[
+            ["name", "in", sorted(required | {"crm_stage_reasons", "kpability_website_pipeline_categories"})],
+            ["state", "=", "installed"],
+        ]], fields=["name", "latest_version"])
+        modules = {module["name"]: module["latest_version"] for module in module_records}
+        assert required <= modules.keys(), f"Missing required modules: {sorted(required - modules.keys())}"
         cls.stage, cls.won = cls.call("crm.stage", "create", [[
             {"name": f"STPC E2E Intake {cls.run_id}", "sequence": -9000},
             {"name": f"STPC E2E Won {cls.run_id}", "sequence": 9000, "is_won": True},
@@ -61,6 +65,8 @@ class SalesTeamPipelineBrowserTests(unittest.TestCase):
         cls.lead = cls.call("crm.lead", "create", [[cls.values("Existing Opportunity", cls.category)]])[0]
         cls.artifact_info = {
             "server_version": session["server_version"], "browser": cls.browser.version, "database": cls.database,
+            "debug_assets": cls.debug_assets,
+            "modules": modules,
             "run_id": cls.run_id, "teams": [cls.team, cls.other_team], "categories": [cls.category, cls.alternative, cls.shared],
             "lead": cls.lead, "cases": [],
         }
@@ -119,8 +125,12 @@ class SalesTeamPipelineBrowserTests(unittest.TestCase):
         cls.playwright.stop()
         print(f"Browser evidence: {cls.output}")
 
+    def open_backend(self, page, path):
+        query = "?debug=assets" if self.debug_assets else ""
+        page.goto(f"/odoo/{path}{query}", wait_until="domcontentloaded")
+
     def open_record(self, model, record_id):
-        self.page.goto(f"/odoo/{model}/{record_id}", wait_until="domcontentloaded")
+        self.open_backend(self.page, f"{model}/{record_id}")
         self.page.locator(".o_form_view").wait_for()
 
     def choose_team(self, name):
@@ -151,6 +161,7 @@ class SalesTeamPipelineBrowserTests(unittest.TestCase):
         expect(self.page.get_by_role("option", name=self.category_names[0], exact=True)).to_be_visible()
         expect(self.page.get_by_role("option", name=self.category_names[2], exact=True)).to_be_visible()
         expect(self.page.get_by_role("option", name=self.category_names[1], exact=True)).to_have_count(0)
+        self.page.screenshot(path=str(self.output / "STPC02-team-category-options.png"), full_page=True)
         self.page.keyboard.press("Escape")
         self.assertEqual(self.persisted(self.lead)["pipeline_category_id"][0], self.category)
 
@@ -165,7 +176,10 @@ class SalesTeamPipelineBrowserTests(unittest.TestCase):
         self.assertEqual(self.persisted(lead)["expected_revenue"], 100)
         self.page.get_by_role("button", name="Discard all changes", exact=True).click()
         expect(category).to_have_value(self.category_names[0])
+        expect(self.page.locator(".o_form_status_indicator_buttons")).to_have_class(re.compile("invisible"))
+        self.assertEqual(self.persisted(lead)["expected_revenue"], 100)
         self.assertEqual(self.persisted(lead)["team_id"][0], self.team)
+        self.page.screenshot(path=str(self.output / "STPC09-after-discard.png"), full_page=True)
         revenue.fill("4321")
         self.choose_team(self.team_names[1])
         category.fill(self.category_names[1])
@@ -174,7 +188,10 @@ class SalesTeamPipelineBrowserTests(unittest.TestCase):
         expect(self.page.locator(".o_form_status_indicator_buttons")).to_have_class(re.compile("invisible"))
         self.page.reload(wait_until="domcontentloaded")
         expect(category).to_have_value(self.category_names[1])
-        self.assertEqual(self.persisted(lead)["expected_revenue"], 4321)
+        persisted = self.persisted(lead)
+        self.assertEqual(persisted["team_id"][0], self.other_team)
+        self.assertEqual(persisted["pipeline_category_id"][0], self.alternative)
+        self.assertEqual(persisted["expected_revenue"], 4321)
 
     def test_04_invalid_save_and_rpc_are_atomic(self):
         self.open_record("crm.lead", self.lead)
@@ -221,7 +238,8 @@ class SalesTeamPipelineBrowserTests(unittest.TestCase):
                                     client=client, context=session["user_context"])
             self.assertEqual(response["error"]["data"]["name"], "odoo.exceptions.AccessError")
             page = client.new_page()
-            page.goto(f"/odoo/crm.team/{self.team}", wait_until="domcontentloaded")
+            page.on("pageerror", lambda error: self.errors.append(str(error)))
+            self.open_backend(page, f"crm.team/{self.team}")
             page.get_by_role("tab", name="Pipeline Categories", exact=True).click()
             expect(page.locator("[name='pipeline_category_ids']")).to_contain_text(self.category_names[0])
             expect(page.locator("[name='pipeline_category_ids'] input")).to_have_count(0)
@@ -236,7 +254,7 @@ class SalesTeamPipelineBrowserTests(unittest.TestCase):
             ["module", "=", "kpability_sales_team_pipeline_categories"],
             ["name", "=", "action_pipeline_team_compatibility"],
         ]], fields=["res_id"])[0]["res_id"]
-        self.page.goto(f"/odoo/action-{action_id}", wait_until="domcontentloaded")
+        self.open_backend(self.page, f"action-{action_id}")
         expect(self.page.locator(".o_list_view")).to_be_visible()
         expect(self.page.get_by_role("button", name="New", exact=True)).to_have_count(0)
         expect(self.page.locator(".o_list_record_selector")).to_have_count(0)
