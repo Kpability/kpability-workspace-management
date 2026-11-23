@@ -1,0 +1,25 @@
+<odoo>
+    <record id="crm_lost_reason_view_form" model="ir.ui.view">
+        <field name="name">crm.lost.reason.form.workspace</field>
+        <field name="model">crm.lost.reason</field>
+        <field name="inherit_id" ref="crm.crm_lost_reason_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//div[hasclass('oe_title')]" position="after">
+                <group>
+                    <field name="stage_ids" widget="many2many_tags" placeholder="All stages"/>
+                </group>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="crm_lost_reason_view_list" model="ir.ui.view">
+        <field name="name">crm.lost.reason.list.workspace</field>
+        <field name="model">crm.lost.reason</field>
+        <field name="inherit_id" ref="crm.crm_lost_reason_view_tree"/>
+        <field name="arch" type="xml">
+            <field name="name" position="after">
+                <field name="stage_ids" widget="many2many_tags" placeholder="All stages"/>
+            </field>
+        </field>
+    </record>
+</odoo>

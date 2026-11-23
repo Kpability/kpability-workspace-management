@@ -1,0 +1,5 @@
+*.conf
+.data/
+__pycache__/
+*.pyc
+secrets/
