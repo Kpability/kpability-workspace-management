@@ -3,6 +3,7 @@ from psycopg2.errors import UniqueViolation
 from odoo import Command
 from odoo.exceptions import AccessError, ValidationError
 from odoo.tests import TransactionCase, new_test_user, tagged
+from odoo.tools import mute_logger
 
 
 @tagged("post_install", "-at_install")
@@ -102,7 +103,7 @@ class TestStageRules(TransactionCase):
                 managers.create({"s_field_name": name})
         with self.assertRaises(ValidationError):
             phone.s_field_name = "email_from"
-        with self.assertRaises(UniqueViolation), self.env.cr.savepoint():
+        with mute_logger("odoo.sql_db"), self.assertRaises(UniqueViolation), self.env.cr.savepoint():
             managers.create({"s_field_name": "phone"})
 
     def test_wrong_field_operators_and_unusable_rules_are_rejected(self):
