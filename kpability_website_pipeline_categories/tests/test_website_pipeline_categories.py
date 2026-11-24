@@ -56,6 +56,15 @@ class TestWebsitePipelineCategoryHttp(HttpCase):
             "stage_ids": [Command.set(cls.stage.ids)],
             "website_ids": [Command.set(cls.website.ids)],
         })
+        cls.team = cls.env["crm.team"]
+        if "pipeline_category_ids" in cls.team._fields:
+            cls.team = cls.team.create({
+                "name": "Website PC HTTP Team",
+                "company_id": cls.website.company_id.id,
+                "use_leads": False,
+                "pipeline_category_ids": [Command.set((cls.category_a | cls.category_b).ids)],
+            })
+            cls.website.write({"crm_default_team_id": cls.team.id, "crm_default_user_id": False})
 
     def setUp(self):
         super().setUp()
@@ -106,6 +115,19 @@ class TestWebsitePipelineCategoryHttp(HttpCase):
             "kp_pipeline_category_ids": f"{self.category_a.id},{self.category_b.id}",
         })
         self.assertTrue(response.json().get("error"), response.text)
+        self.assertFalse(self.env["crm.lead"].sudo().search([("name", "=", name)]))
+
+    def test_unmapped_website_team_rejects_entire_submission(self):
+        if not self.team:
+            self.skipTest("Sales-team category add-on is not installed")
+        self.team.pipeline_category_ids = self.category_a
+        name = "Website PC Unmapped Team"
+        response = self.url_open("/website/form/crm.lead", data={
+            "name": name,
+            "email_from": "website-pc-unmapped@example.test",
+            "kp_pipeline_category_ids": f"{self.category_a.id},{self.category_b.id}",
+        })
+        self.assertIn("sales team mapped", response.json().get("error", ""), response.text)
         self.assertFalse(self.env["crm.lead"].sudo().search([("name", "=", name)]))
 
     def test_attachments_keep_their_content_in_each_selected_pipeline(self):

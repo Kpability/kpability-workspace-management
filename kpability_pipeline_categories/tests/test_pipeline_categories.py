@@ -42,6 +42,7 @@ class TestPipelineCategories(TransactionCase):
             company_id=cls.company_a.id,
             company_ids=[Command.set((cls.company_a | cls.company_b).ids)],
         )
+        cls.team_a.member_ids = [Command.link(cls.sales.id)]
         cls.sales_a = new_test_user(
             cls.env, login="pc_sales_a", groups="sales_team.group_sale_salesman",
             company_id=cls.company_a.id,
@@ -75,6 +76,14 @@ class TestPipelineCategories(TransactionCase):
                 "stage_ids": [Command.set((cls.stage_common | cls.stage_b | cls.won_b).ids)],
             },
         ])
+        cls._map_team_categories(cls.team_a, cls.category_a | cls.category_shared)
+        cls._map_team_categories(cls.team_b, cls.category_b | cls.category_shared)
+
+    @classmethod
+    def _map_team_categories(cls, team, categories):
+        # Post-install tests also run with the optional sales-team add-on loaded.
+        if "pipeline_category_ids" in team._fields:
+            team.write({"pipeline_category_ids": [Command.link(category.id) for category in categories]})
 
     def _lead_vals(self, category=None, **overrides):
         vals = {
@@ -132,6 +141,7 @@ class TestPipelineCategories(TransactionCase):
                 "s_name": f"PC Unavailable {stages.ids}", "company_id": False,
                 "stage_ids": [Command.set(stages.ids)],
             })
+            self._map_team_categories(self.team_a, category)
             with self.assertRaises(ValidationError):
                 self._lead(category)
         with self.assertRaises(UserError):
@@ -177,6 +187,7 @@ class TestPipelineCategories(TransactionCase):
             "s_name": "PC Wrong Team", "company_id": False,
             "stage_ids": [Command.set(self.stage_b.ids)],
         })
+        self._map_team_categories(self.team_a, category)
         with self.assertRaises(ValidationError):
             self._lead(category, stage_id=self.stage_b.id)
 
@@ -249,6 +260,10 @@ class TestPipelineCategories(TransactionCase):
 
     def test_pc07_companyless_records_only_accept_shared_categories(self):
         companyless = {"company_id": False, "team_id": False, "user_id": False}
+        if "pipeline_category_ids" in self.team_a._fields:
+            global_team = self.env["crm.team"].create({"name": "PC Global Team", "company_id": False})
+            self._map_team_categories(global_team, self.category_shared)
+            companyless["team_id"] = global_team.id
         lead = self._lead(self.category_shared, **companyless)
         self.assertFalse(lead.company_id)
         with self.assertRaises((UserError, ValidationError)):
@@ -348,6 +363,7 @@ class TestPipelineCategories(TransactionCase):
         category = self.Category.create({
             "s_name": "PC Second Client", "company_id": False, "stage_ids": [Command.set(stage.ids)],
         })
+        self._map_team_categories(self.team_a, category)
         lead = self._lead(category)
         self.assertEqual(lead.stage_id, stage)
         self.assertNotIn(stage, self.category_a.stage_ids)
@@ -367,6 +383,7 @@ class TestPipelineCategories(TransactionCase):
             "s_name": "PC No Won", "company_id": False,
             "stage_ids": [Command.set(self.stage_common.ids)],
         })
+        self._map_team_categories(self.team_a, no_won)
         valid = self._lead(self.category_a)
         invalid = self._lead(no_won)
         unclassified = self._lead()
@@ -394,6 +411,7 @@ class TestPipelineCategories(TransactionCase):
         partner = self.env["res.partner"].create({"name": "PC Customer"})
         lead.convert_opportunity(partner, user_ids=self.sales.ids, team_id=self.team_a.id)
         self.assertEqual(lead.type, "opportunity")
+        self.assertEqual(lead.team_id, self.team_a)
         self.assertEqual(lead.pipeline_category_id, self.category_a)
         copied = lead.copy({"name": "PC Copied Opportunity"})
         self.assertEqual(copied.pipeline_category_id, self.category_a)
@@ -409,6 +427,7 @@ class TestPipelineCategories(TransactionCase):
     def test_merge_matching_classification_preserved(self):
         leads = self._lead(self.category_a) | self._lead(self.category_a)
         merged = leads._merge_opportunity()
+        self.assertEqual(merged.team_id, self.team_a)
         self.assertEqual(merged.pipeline_category_id, self.category_a)
         self.assertIn(merged.stage_id, self.category_a.stage_ids)
 
@@ -451,6 +470,7 @@ class TestPipelineCategories(TransactionCase):
             "kpability_pipeline_categories.crm_pipeline_category_menu_sales",
             raise_if_not_found=False,
         ))
+        self._map_team_categories(self.team_a, starter)
         lead = self._lead(starter)
         self.assertGreaterEqual(starter.lead_count, 1)
         self.assertIn(lead, self.Lead.search([("pipeline_category_id", "=", starter.id)]))
@@ -531,6 +551,13 @@ class TestPipelineCategories(TransactionCase):
                 "alias_domain_id": domain.id,
             })
 
+    def _configure_gateway_test_team(self, aliases):
+        if "pipeline_category_ids" in self.team_a._fields:
+            # Supply the native alias team defaults explicitly for these synthetic routes.
+            for alias in aliases.alias_id:
+                defaults = dict(literal_eval(alias.alias_defaults), team_id=self.team_a.id)
+                alias.alias_defaults = repr(defaults)
+
     def test_incoming_email_gateway_deduplicates_categories_and_delivery(self):
         domain = self.env["mail.alias.domain"].create({"name": "pc-gateway.example.test"})
         aliases = self.env["crm.pipeline.category.alias"].create([
@@ -538,6 +565,7 @@ class TestPipelineCategories(TransactionCase):
             {"category_id": self.category_a.id, "alias_name": "admissions", "alias_domain_id": domain.id},
             {"category_id": self.category_shared.id, "alias_name": "renewals", "alias_domain_id": domain.id},
         ])
+        self._configure_gateway_test_team(aliases)
         message = EmailMessage()
         message["From"] = "PC Gateway Visitor <pc-gateway-visitor@example.test>"
         message["To"] = ", ".join(aliases.mapped("alias_full_name"))
@@ -568,6 +596,7 @@ class TestPipelineCategories(TransactionCase):
         alias = self.env["crm.pipeline.category.alias"].create({
             "category_id": self.category_shared.id, "alias_name": "intake", "alias_domain_id": domain.id,
         })
+        self._configure_gateway_test_team(alias)
         message = EmailMessage()
         message["From"] = "PC Reply Visitor <pc-reply-visitor@example.test>"
         message["To"] = alias.alias_full_name
