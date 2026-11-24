@@ -7,15 +7,18 @@ class CrmLead(models.Model):
     @api.model_create_multi
     def create(self, vals_list):
         leads = super().create(vals_list)
-        leads._apply_keyword_assignment()
+        to_assign = self.browse([
+            lead.id
+            for lead, vals in zip(leads, vals_list)
+            if not vals.get("user_id")
+        ])
+        to_assign._apply_keyword_assignment()
         return leads
 
     def write(self, vals):
         res = super().write(vals)
         if "user_id" not in vals:
-            rules = self._get_keyword_assignment_rules()
-            if set(vals) & set(rules.field_id.mapped("name")):
-                self._apply_keyword_assignment(rules)
+            self._apply_keyword_assignment()
         return res
 
     def _get_keyword_assignment_rules(self):
