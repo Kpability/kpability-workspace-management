@@ -1,0 +1,83 @@
+<odoo>
+    <record id="crm_keyword_assignment_view_search" model="ir.ui.view">
+        <field name="name">crm.keyword.assignment.search</field>
+        <field name="model">crm.keyword.assignment</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="keyword_ids"/>
+                <field name="field_id"/>
+                <field name="user_id"/>
+                <filter string="Archived" name="inactive" domain="[('active', '=', False)]"/>
+                <group>
+                    <filter string="Field" name="group_by_field" context="{'group_by': 'field_id'}"/>
+                    <filter string="Salesperson" name="group_by_salesperson" context="{'group_by': 'user_id'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="crm_keyword_assignment_view_list" model="ir.ui.view">
+        <field name="name">crm.keyword.assignment.list</field>
+        <field name="model">crm.keyword.assignment</field>
+        <field name="arch" type="xml">
+            <list editable="bottom" js_class="crm_keyword_assignment_list">
+                <field name="n_sequence" widget="handle"/>
+                <field name="field_id" options="{'no_create': True, 'no_open': True}"/>
+                <field name="e_comparison_type"/>
+                <field name="keyword_ids" widget="many2many_tags" options="{'no_open': True}"/>
+                <field name="user_id" widget="many2one_avatar_user"/>
+                <field
+                        name="s_domain"
+                        widget="domain"
+                        options="{'model': 'crm.lead', 'in_dialog': True, 'foldable': True}"
+                />
+            </list>
+        </field>
+    </record>
+
+    <record id="crm_keyword_assignment_view_form" model="ir.ui.view">
+        <field name="name">crm.keyword.assignment.form</field>
+        <field name="model">crm.keyword.assignment</field>
+        <field name="arch" type="xml">
+            <form string="Keyword Rule">
+                <sheet>
+                    <group>
+                        <field name="field_id" options="{'no_create': True, 'no_open': True}"/>
+                        <field name="e_comparison_type"/>
+                        <field name="keyword_ids" widget="many2many_tags" options="{'no_open': True}"/>
+                        <field name="user_id" widget="many2one_avatar_user"/>
+                        <field
+                                name="s_domain"
+                                widget="domain"
+                                options="{'model': 'crm.lead', 'in_dialog': True, 'foldable': True}"
+                        />
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="crm_keyword_assignment_action" model="ir.actions.act_window">
+        <field name="name">Keyword Assignment</field>
+        <field name="res_model">crm.keyword.assignment</field>
+        <field name="view_mode">list,form</field>
+        <field name="context">{'search_default_group_by_field': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Create a Keyword Assignment Rule</p>
+            <p>
+                Assign a salesperson automatically when a lead field matches any keyword tag
+                and the optional Condition domain matches. Rules are checked from top to
+                bottom and the first match wins.
+            </p>
+        </field>
+    </record>
+
+    <menuitem
+            id="menu_crm_keyword_assignment"
+            name="Keyword Assignment"
+            parent="crm.menu_crm_config_lead"
+            action="crm_keyword_assignment_action"
+            groups="sales_team.group_sale_manager"
+            sequence="8"
+    />
+</odoo>
