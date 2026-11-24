@@ -7,6 +7,7 @@
             <field name="s_description" position="after">
                 <field name="s_can_edit_sales_teams" invisible="1"/>
                 <field name="sales_team_ids" widget="many2many_tags" readonly="not s_can_edit_sales_teams"
+                    domain="[('company_id', '=', company_id)] if company_id else []"
                     options="{'no_create': True, 'no_open': True}"/>
             </field>
         </field>

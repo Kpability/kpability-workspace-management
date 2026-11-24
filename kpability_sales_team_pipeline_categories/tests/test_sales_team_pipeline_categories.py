@@ -121,6 +121,119 @@ class TestSalesTeamPipelineCategories(TransactionCase):
         self.assertFalse(copied.sales_team_ids)
         self.assertFalse(self.team_a.copy({"name": "STPC Team Copy"}).pipeline_category_ids)
 
+    def test_stpc01_category_side_defaults_use_the_guarded_path(self):
+        self.assertEqual(
+            self.Category._normalize_sales_team_commands(Command.clear()),
+            [Command.clear()],
+        )
+        self.assertEqual(
+            self.Category._normalize_sales_team_commands(Command.link(self.team_b.id)),
+            [Command.link(self.team_b.id)],
+        )
+        defaulted_model = self.Category.with_context(default_sales_team_ids=[self.team_a.id])
+        defaulted = defaulted_model.create({
+            "s_name": "STPC Defaulted Mapping",
+            "company_id": self.company_a.id,
+            "stage_ids": [Command.set((self.stage_common | self.stage_a).ids)],
+        })
+        self.assertEqual(defaulted.sales_team_ids, self.team_a)
+
+        explicit = defaulted_model.create({
+            "s_name": "STPC Explicit Overrides Default",
+            "company_id": self.company_a.id,
+            "sales_team_ids": [Command.link(self.team_other.id)],
+        })
+        self.assertEqual(explicit.sales_team_ids, self.team_other)
+        self.assertNotIn(self.team_a, explicit.sales_team_ids)
+
+        cleared = defaulted_model.create({
+            "s_name": "STPC Cleared Overrides Default",
+            "company_id": self.company_a.id,
+            "sales_team_ids": [Command.clear()],
+        })
+        self.assertFalse(cleared.sales_team_ids)
+
+        cleared_list = defaulted_model.create({
+            "s_name": "STPC Empty List Overrides Default",
+            "company_id": self.company_a.id,
+            "sales_team_ids": [],
+        })
+        self.assertFalse(cleared_list.sales_team_ids)
+
+        with self.assertRaises(ValidationError), self.env.cr.savepoint():
+            defaulted_model.create({
+                "s_name": "STPC Archived Default Mapping",
+                "company_id": self.company_a.id,
+                "active": False,
+            })
+        self.assertFalse(self.Category.with_context(active_test=False).search([
+            ("s_name", "=", "STPC Archived Default Mapping"),
+        ]))
+
+        with self.assertRaises(ValidationError), self.env.cr.savepoint():
+            self.Category.with_context(default_sales_team_ids=[self.team_b.id]).create({
+                "s_name": "STPC Wrong Company Default Mapping",
+                "company_id": self.company_a.id,
+            })
+        self.assertFalse(self.Category.search([("s_name", "=", "STPC Wrong Company Default Mapping")]))
+
+    def test_stpc01_company_scope_and_mapping_change_are_atomic(self):
+        category = self.Category.create({
+            "s_name": "STPC Scope Swap",
+            "company_id": False,
+            "stage_ids": [Command.set((self.stage_common | self.stage_a | self.won).ids)],
+        })
+        self.team_b.write({"pipeline_category_ids": [Command.link(category.id)]})
+        with self.assertRaises(ValidationError), self.env.cr.savepoint():
+            category.write({"company_id": self.company_a.id})
+        self.assertFalse(category.company_id)
+
+        category.write({
+            "company_id": self.company_a.id,
+            "sales_team_ids": [Command.set(self.team_a.ids)],
+        })
+        self.env.invalidate_all()
+        self.assertEqual(category.company_id, self.company_a)
+        self.assertEqual(category.sales_team_ids, self.team_a)
+        self.assertNotIn(category, self.team_b.pipeline_category_ids)
+
+        # A caller-supplied True must not be accepted as the internal deferral
+        # marker; only the private sentinel set by write() can defer the check.
+        with self.assertRaises(ValidationError), self.env.cr.savepoint():
+            category.with_context(kpability_stpc_defer_company_scope=True).write({
+                "company_id": self.company_b.id,
+            })
+        self.assertEqual(category.company_id, self.company_a)
+
+        # An explicit empty list clears the mapping instead of being treated as
+        # "field absent" and silently ignored.
+        category.write({"sales_team_ids": []})
+        self.env.invalidate_all()
+        self.assertFalse(category.sales_team_ids)
+
+        category.write({
+            "company_id": False,
+            "sales_team_ids": [Command.set(self.team_b.ids)],
+        })
+        self.env.invalidate_all()
+        self.assertFalse(category.company_id)
+        self.assertEqual(category.sales_team_ids, self.team_b)
+        self.assertNotIn(category, self.team_a.pipeline_category_ids)
+
+        invalid = self.Category.create({
+            "s_name": "STPC Invalid Final Scope",
+            "company_id": False,
+            "stage_ids": [Command.set((self.stage_common | self.won).ids)],
+        })
+        self.team_b.write({"pipeline_category_ids": [Command.link(invalid.id)]})
+        with self.assertRaises(ValidationError), self.env.cr.savepoint():
+            invalid.write({
+                "company_id": self.company_a.id,
+                "sales_team_ids": [Command.set(self.team_b.ids)],
+            })
+        self.assertFalse(invalid.company_id)
+        self.assertIn(invalid, self.team_b.pipeline_category_ids)
+
     def test_stpc02_categories_follow_draft_team_and_company(self):
         draft = self.Lead.new(self._values(False))
         self.assertEqual(draft.pipeline_team_category_ids._origin, self.team_a.pipeline_category_ids)
@@ -464,6 +577,11 @@ class TestSalesTeamPipelineCategories(TransactionCase):
         )["arch"])
         self.assertEqual(quick.xpath("//field[@name='team_id']")[0].get("invisible"), "False")
         self.assertTrue(quick.xpath("//field[@name='pipeline_team_category_ids']"))
+        category_view = etree.fromstring(self.Category.get_view(
+            self.env.ref("kpability_pipeline_categories.crm_pipeline_category_view_form").id, "form",
+        )["arch"])
+        category_teams = category_view.xpath("//field[@name='sales_team_ids']")[0]
+        self.assertIn("company_id", category_teams.get("domain") or "")
         for xml_id in ("crm_lead_view_list_compatibility", "crm_lead_view_form_compatibility"):
             arch = etree.fromstring(self.env.ref(f"kpability_sales_team_pipeline_categories.{xml_id}").arch_db)
             self.assertEqual(arch.get("edit"), "0")

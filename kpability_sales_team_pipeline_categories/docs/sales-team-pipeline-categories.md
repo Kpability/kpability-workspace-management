@@ -151,9 +151,9 @@ Raw maker logs are local under `/tmp/opencode/`.
 
 | Run | Result | File in the local run directory |
 | --- | --- | --- |
-| Final combined branch with `20` at `80bbe6b` (PR #7 retirement included), fresh Enterprise demo database, all tagged suites | **90 checks, 0 failed, 0 errors** | `kpability-stpc-final-1534c71.log` |
-| Same final branch, fresh no-demo database, same tagged suites | **90 checks, 0 failed, 0 errors** | `kpability-stpc-final-nodemo.log` |
-| Same final branch, Playwright `debug=assets`, category-side mapping included | **7/7 passed**, no unexpected page JavaScript errors | `kpability-stpc-final-browser.log`, `browser/20261124080609/` |
+| Final branch after category-picker fixes, fresh Enterprise demo database, all tagged suites | **92 checks, 0 failed, 0 errors** | `kpability-stpc-fixes/full-final.log` |
+| Final branch, no-demo database, team module suite | **37 checks, 0 failed, 0 errors** | `kpability-stpc-fixes/full-nodemo.log` |
+| Final branch, Playwright `debug=assets`, category-side mapping and company-filtered picker included | **7/7 passed**, no unexpected page JavaScript errors | `kpability-stpc-fixes/browser.log`, `browser/20261124093046/` |
 | Fresh consumer + Enterprise + CRM Stage Reasons, no website companion | **37 passed**, including all 35 authored STPC methods | `fresh.log` |
 | Same-version consumer update on the fresh database | **35 passed** | `fresh-update.log` |
 | Category base + Enterprise, no team consumer | **45 passed**, including 43 authored base tests | `base-only.log` |

@@ -15,6 +15,7 @@ per-case videos are retained locally:
 | --- | --- |
 | [`stpc01-team-mapping.png`](stpc01-team-mapping.png) | STPC01: native Sales Manager team configuration with explicit mappings |
 | [`stpc01-category-team-mapping.png`](stpc01-category-team-mapping.png) | STPC01: Sales Manager adds a team from the category form; the Sales Teams tab shows the same relation after saving |
+| [`stpc01-category-team-filter.png`](stpc01-category-team-filter.png) | STPC01: company-specific category picker offers only the same-company team; the wrong-company team is absent |
 | [`stpc02-team-category-options.png`](stpc02-team-category-options.png) | STPC02: team-mapped categories appear in the dropdown; the test asserts an unmapped category is absent |
 | [`stpc04-invalid-save.png`](stpc04-invalid-save.png) | STPC04/STPC05: invalid team change rejected; an independent RPC attempt fails and the record stays unchanged |
 | [`stpc08-sales-read-only.png`](stpc08-sales-read-only.png) | STPC08: salesperson sees mapping read-only; test also checks backend write denial |

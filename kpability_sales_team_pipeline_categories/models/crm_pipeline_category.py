@@ -1,6 +1,10 @@
 from odoo import Command, _, api, fields, models
 from odoo.exceptions import UserError, ValidationError
 
+# Context values survive internal ``with_context`` calls but cannot be sent over
+# JSON/XML-RPC, so a user-supplied True value cannot defer the scope check.
+_DEFER_COMPANY_SCOPE = object()
+
 
 class CrmPipelineCategory(models.Model):
     _inherit = "crm.pipeline.category"
@@ -28,28 +32,68 @@ class CrmPipelineCategory(models.Model):
         for category in self:
             category.s_can_edit_sales_teams = can_write
 
+    @api.model
+    def _default_sales_team_commands(self):
+        value = self.default_get(["sales_team_ids"]).get("sales_team_ids")
+        return self._normalize_sales_team_commands(value) if value else None
+
+    @api.model
+    def _normalize_sales_team_commands(self, commands):
+        if commands is None:
+            return []
+        if isinstance(commands, models.BaseModel):
+            return [Command.set(commands.ids)]
+        if commands is False or not commands:
+            return [Command.clear()]
+        if isinstance(commands[0], int):
+            if commands[0] in {Command.CREATE, Command.UPDATE, Command.DELETE,
+                               Command.UNLINK, Command.LINK, Command.CLEAR, Command.SET}:
+                return [commands]
+            if all(isinstance(command, int) for command in commands):
+                return [Command.set(commands)]
+        return list(commands)
+
     @api.model_create_multi
     def create(self, vals_list):
-        team_commands = []
-        clean_vals_list = []
+        prepared = []
+        default_commands = None
         for vals in vals_list:
             vals = dict(vals)
-            team_commands.append(vals.pop("sales_team_ids", None))
-            clean_vals_list.append(vals)
-        categories = super().create(clean_vals_list)
-        for category, commands in zip(categories, team_commands):
-            if commands:
+            if "sales_team_ids" in vals:
+                commands = self._normalize_sales_team_commands(vals.pop("sales_team_ids"))
+            else:
+                if default_commands is None:
+                    default_commands = self._default_sales_team_commands()
+                commands = default_commands
+            # Resolve defaults here so they take the same guarded team-side path
+            # as explicit values. The clear sentinel prevents base create from
+            # writing the raw relation default a second time.
+            vals["sales_team_ids"] = [Command.clear()]
+            prepared.append((vals, commands))
+        categories = super().create([vals for vals, _commands in prepared])
+        for category, (_vals, commands) in zip(categories, prepared):
+            if commands is not None:
                 category._set_sales_team_ids(commands)
+            category._check_sales_team_company_scope()
         return categories
 
     def write(self, vals):
-        commands = vals.get("sales_team_ids")
+        commands = vals.get("sales_team_ids") if "sales_team_ids" in vals else None
         vals = dict(vals)
         vals.pop("sales_team_ids", None)
+        company_change = "company_id" in vals
+        # A simultaneous company scope and mapping change is validated against
+        # its final state, not the old relation rows that are about to be replaced.
+        defer_scope = company_change and commands is not None
+        if defer_scope:
+            self = self.with_context(kpability_stpc_defer_company_scope=_DEFER_COMPANY_SCOPE)
         result = super().write(vals)
-        if commands:
+        if commands is not None:
+            commands = self._normalize_sales_team_commands(commands)
             for category in self:
                 category._set_sales_team_ids(commands)
+        if company_change:
+            self.with_context(kpability_stpc_defer_company_scope=False)._check_sales_team_company_scope()
         return result
 
     def _set_sales_team_ids(self, commands):
@@ -85,6 +129,8 @@ class CrmPipelineCategory(models.Model):
 
     @api.constrains("company_id")
     def _check_sales_team_company_scope(self):
+        if self.env.context.get("kpability_stpc_defer_company_scope") is _DEFER_COMPANY_SCOPE:
+            return
         # A shared category can be linked to teams outside the editor's selected
         # companies. Only test existence; never expose hidden teams to the editor.
         teams = self.env["crm.team"].sudo().with_context(active_test=False)

@@ -26,10 +26,13 @@ category model, new roles, or category-based record access.
 The category form also lets Sales Managers add or remove **Sales Teams**. Both
 forms edit the same relation, and category-side writes are routed through the
 team field, so its active-category, company-scope and used-history protections
-still apply. The field is read-only for non-managers. Actual writes still require
-native team write permissions; imports/RPC use the same checks. No extra ACLs are
-necessary: native team write permissions and the base category record rules
-remain authoritative.
+still apply. The picker only offers teams compatible with the category's
+company, and a company-scope change can be saved together with a compatible
+mapping swap. Defaults take the same checked path, and an explicit empty
+selection overrides them. The field is read-only for non-managers. Actual
+writes still require native team write permissions; imports/RPC use the same
+checks. No extra ACLs are necessary: native team write permissions and the base
+category record rules remain authoritative.
 
 ## CRM behavior
 
