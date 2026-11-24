@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <record id="view_crm_lead_form_stage_rules" model="ir.ui.view">
+        <field name="name">crm.lead.form.stage.rules</field>
+        <field name="model">crm.lead</field>
+        <field name="inherit_id" ref="crm.crm_lead_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//form" position="attributes">
+                <attribute name="js_class">kpability_stage_rules_crm_form</attribute>
+            </xpath>
+        </field>
+    </record>
+</odoo>

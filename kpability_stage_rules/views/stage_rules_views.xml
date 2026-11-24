@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <record id="view_stage_rules_field_form" model="ir.ui.view">
+        <field name="name">stage.rules.field.form</field>
+        <field name="model">stage.rules.field</field>
+        <field name="arch" type="xml">
+            <form string="Register an opportunity field">
+                <group>
+                    <div colspan="2" class="text-muted">
+                        Choose a field that is already on the opportunity form. This only adds it to the Stage Rules dropdown.
+                    </div>
+                    <field name="s_field_name" widget="kpability_stage_field_picker" readonly="id"/>
+                </group>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_stage_rules_list" model="ir.ui.view">
+        <field name="name">stage.rules.list</field>
+        <field name="model">stage.rules</field>
+        <field name="arch" type="xml">
+            <list decoration-muted="not active">
+                <field name="s_name"/>
+                <field name="stage_ids" widget="many2many_tags"/>
+                <field name="target_field_ids" widget="many2many_tags"/>
+                <field name="group_ids" widget="many2many_tags" optional="show"/>
+                <field name="company_id" groups="base.group_multi_company" optional="show"/>
+                <field name="active" widget="boolean" readonly="1"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_stage_rules_form" model="ir.ui.view">
+        <field name="name">stage.rules.form</field>
+        <field name="model">stage.rules</field>
+        <field name="arch" type="xml">
+            <form>
+                <sheet>
+                    <div class="oe_title">
+                        <label for="s_name"/>
+                        <h1><field name="s_name" placeholder="e.g. Request a closing date"/></h1>
+                    </div>
+                    <group string="Applies To">
+                        <group>
+                            <field name="stage_ids" widget="many2many_tags"
+                                   options="{'no_create': True}"/>
+                            <field name="target_field_ids" widget="many2many_tags"
+                                   options="{'no_quick_create': True}"
+                                   context="{'form_view_ref': 'kpability_stage_rules.view_stage_rules_field_form'}"/>
+                        </group>
+                        <group>
+                            <field name="group_ids" widget="many2many_tags" placeholder="Everyone"
+                                   options="{'no_create': True, 'no_open': True}"/>
+                            <field name="company_id" groups="base.group_multi_company"
+                                   options="{'no_create': True, 'no_open': True}"/>
+                            <field name="active" widget="boolean_toggle"/>
+                        </group>
+                    </group>
+                    <group string="Field Behavior">
+                        <field name="j_condition_fields" invisible="1"/>
+                        <field name="e_visibility"/>
+                        <field name="s_visibility_domain" widget="kpability_stage_condition"
+                               nolabel="1" colspan="2" invisible="e_visibility != 'when'"
+                               required="e_visibility == 'when'"/>
+                        <field name="e_enabled"/>
+                        <field name="s_enabled_domain" widget="kpability_stage_condition"
+                               nolabel="1" colspan="2" invisible="e_enabled != 'when'"
+                               required="e_enabled == 'when'"/>
+                        <field name="e_required"/>
+                        <field name="s_required_domain" widget="kpability_stage_condition"
+                               options="{'allow_targets': True}" nolabel="1" colspan="2"
+                               invisible="e_required != 'when'" required="e_required == 'when'"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_stage_rules_search" model="ir.ui.view">
+        <field name="name">stage.rules.search</field>
+        <field name="model">stage.rules</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="s_name"/>
+                <field name="stage_ids"/>
+                <field name="target_field_ids"/>
+                <filter name="active" string="Active" domain="[('active', '=', True)]"/>
+                <filter name="inactive" string="Inactive" domain="[('active', '=', False)]"/>
+                <group>
+                    <filter name="group_by_company" string="Company"
+                            context="{'group_by': 'company_id'}" groups="base.group_multi_company"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_stage_rules" model="ir.actions.act_window">
+        <field name="name">Stage Rules</field>
+        <field name="res_model">stage.rules</field>
+        <field name="view_mode">list,form</field>
+        <field name="search_view_id" ref="view_stage_rules_search"/>
+        <field name="context">{'active_test': False}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Create a stage rule</p>
+            <p>Choose which stages and fields the rule applies to, then set when the fields are shown, editable, or required.</p>
+        </field>
+    </record>
+
+    <menuitem id="menu_stage_rules" name="Stage Rules" parent="crm.crm_menu_config"
+              action="action_stage_rules" sequence="35" groups="sales_team.group_sale_manager"/>
+</odoo>

@@ -1,6 +1,6 @@
 {
     "name": "Kpability Pipeline Categories",
-    "version": "20.0.1.1.0",
+    "version": "20.0.1.2.0",
     "summary": "Reusable, company-aware categories and stage mappings for CRM pipelines",
     "description": "Configure shared or company-specific CRM pipeline categories with reusable stages, "
     "scoped pipeline boards, native sales-team restrictions and backend consistency checks.",

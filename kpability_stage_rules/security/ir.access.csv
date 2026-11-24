@@ -1,0 +1,4 @@
+id,name,model_id,group_id/id,operation,domain
+stage_rules_manager,Stage Rules manager,stage.rules,sales_team.group_sale_manager,crud,
+stage_rules_company,Stage Rules company,stage.rules,,crud,"[('company_id', 'in', company_ids)]"
+stage_rules_field_manager,Registered opportunity fields,stage.rules.field,sales_team.group_sale_manager,crud,
