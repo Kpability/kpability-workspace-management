@@ -5,15 +5,16 @@ Enterprise**. The add-on depends on native `crm`; Enterprise validation uses
 `web_enterprise` and `crm_enterprise` installed alongside it. No Studio, custom
 role system, or frontend patch is required.
 
-`kpability_website_pipeline_categories` is an optional companion add-on for
-website forms and website-specific category availability.
+Website and incoming-email integrations are **deferred** to a separate PR;
+see [issue #6](https://github.com/Kpability/kpability-workspace-management/issues/6).
+This delivery provides core CRM pipeline categories only.
 
 ## Install and configure
 
 1. Include this repository root in the server's add-on path, alongside the
    matching Odoo 20 server and Enterprise add-ons.
-2. Install `kpability_pipeline_categories`. Install
-   `kpability_website_pipeline_categories` only if the website form is needed.
+2. Install `kpability_pipeline_categories`. Do not install the retired website
+   compatibility module on new deployments.
 3. As a Sales Manager, open **CRM → Configuration → Pipeline → Pipeline
    Categories**. The operational **Sales → Pipelines** overview is for all sales
    users.
@@ -27,13 +28,6 @@ website forms and website-specific category availability.
    reordered in every pipeline that uses it. Sales teams, Won/Lost and Folded
    remain native CRM behavior; they are intentionally not edited from the
    simplified category stage list.
-7. On the category, add one or more **Incoming Email Addresses**. Every listed
-   address creates an opportunity in that pipeline. One email sent to addresses
-   in different pipelines creates one opportunity per pipeline, but never two in
-   the same pipeline.
-8. For a website form, install `kpability_website_pipeline_categories`, enable
-   the category on the **Websites** tab, and add the **CRM Pipeline Form** block
-   in the website editor. Visitors can select one or more available pipelines.
 
 The **Sales → Pipelines** overview displays one card per category. Opening a card
 shows only that pipeline's records and stages. **All Opportunities** and
@@ -82,20 +76,43 @@ stage rules, dropdown engines, reason dialogs or `workspace_management`.
 
 ## Validation and release
 
+### Upgrading an installation from PR #4
+
+Back up the matching database, filestore and code first. Upgrade
+`kpability_pipeline_categories` **and**, if already installed,
+`kpability_website_pipeline_categories`; do not delete/uninstall the latter as
+part of this update. The small compatibility layer retains existing mappings
+and template references without offering the integration.
+
+The base migration disables only native mail aliases owned by the retired
+pipeline-email configuration. Exact previous native alias names are retained in
+`s_deferred_alias_name`; original configuration and CRM records are not deleted.
+Ordinary native CRM email aliases and website forms remain native and available.
+Do not manually reactivate retired aliases before a separately reviewed follow-up.
+
+The category has no email or website tabs. The website category endpoint and
+editor block are removed; old template references display an unavailable notice.
+Previously copied forms are disabled in the browser, and cached pipeline-specific
+submissions are rejected by the server without creating CRM records.
+
+### Tests
+
 Run the Odoo transaction suite with:
 
 ```bash
 python /path/to/odoo/odoo-bin \
   --addons-path=/path/to/enterprise,/path/to/odoo/addons,/path/to/this/repository \
   --database=your_disposable_test_database \
-  --update=kpability_pipeline_categories,kpability_website_pipeline_categories \
+  --update=kpability_pipeline_categories \
   --test-enable \
-  --test-tags=/kpability_pipeline_categories,/kpability_website_pipeline_categories \
+  --test-tags=/kpability_pipeline_categories \
   --stop-after-init
 ```
 
 Supply database connection settings separately. Fresh-install validation must
 also install `web_enterprise,crm_enterprise` to exercise the intended edition.
+For installed-website upgrade regression, include both module names in
+`--update` and both module tags in `--test-tags`.
 See [implementation and verification](docs/pipeline-categories.md)
 for the actual tested revisions, results, local setup and outstanding checks.
 Module-specific documentation and screenshots live in `docs/`; both the Odoo

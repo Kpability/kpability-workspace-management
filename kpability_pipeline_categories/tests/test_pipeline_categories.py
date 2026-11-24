@@ -9,6 +9,8 @@ from odoo.exceptions import AccessError, UserError, ValidationError
 from odoo.tests import Form, TransactionCase, new_test_user, tagged
 from odoo.tools import mute_logger
 
+from ..models.crm_pipeline_category_alias import CrmPipelineCategoryAlias
+
 
 @tagged("post_install", "-at_install")
 class TestPipelineCategories(TransactionCase):
@@ -485,107 +487,115 @@ class TestPipelineCategories(TransactionCase):
         self.assertFalse(kanban.xpath(".//field[@name='lead_count']"))
         self.assertFalse(kanban.xpath(".//button | .//span[normalize-space(text())='open']"))
 
-    def test_category_email_addresses_and_route_deduplication(self):
-        domain = self.env["mail.alias.domain"].create({"name": "pc-pipeline.example.test"})
-        aliases = self.env["crm.pipeline.category.alias"].create([
-            {"category_id": self.category_a.id, "alias_name": "pc-enrollment-a1", "alias_domain_id": domain.id},
-            {"category_id": self.category_a.id, "alias_name": "pc-enrollment-a2", "alias_domain_id": domain.id},
-            {"category_id": self.category_shared.id, "alias_name": "pc-renewals", "alias_domain_id": domain.id},
-        ])
-        self.assertEqual(aliases[0].alias_id.alias_model_id.model, "crm.lead")
-        defaults = literal_eval(aliases[0].alias_id.alias_defaults)
-        self.assertEqual(defaults["pipeline_category_id"], self.category_a.id)
-        self.assertEqual(defaults["type"], "opportunity")
-        routes = [
-            ("crm.lead", False, {"pipeline_category_id": self.category_a.id}, self.env.uid, alias.alias_id)
-            for alias in aliases[:2]
-        ]
-        routes.append((
-            "crm.lead", False, {"pipeline_category_id": self.category_shared.id},
-            self.env.uid, aliases[2].alias_id,
-        ))
-        deduplicated = self.env["mail.thread"]._deduplicate_pipeline_category_routes(routes)
-        self.assertEqual(len(deduplicated), 2)
-        self.assertEqual(
-            {route[2]["pipeline_category_id"] for route in deduplicated},
-            {self.category_a.id, self.category_shared.id},
-        )
-        aliases[0].write({"alias_name": "pc-enrollment-renamed"})
-        self.assertEqual(aliases[0].alias_id.alias_name, "pc-enrollment-renamed")
-        alias_id = aliases[0].alias_id
-        aliases[0].unlink()
-        self.assertFalse(alias_id.exists())
+    def _legacy_email_configuration(self):
+        domain = self.env["mail.alias.domain"].create({"name": "pc-retired.example.test"})
+        alias = self.env["mail.alias"].create({
+            "alias_name": "retired-intake", "alias_domain_id": domain.id,
+            "alias_model_id": self.env["ir.model"]._get_id("crm.lead"),
+            "alias_parent_model_id": self.env["ir.model"]._get_id("crm.pipeline.category"),
+            "alias_parent_thread_id": self.category_a.id,
+            "alias_defaults": repr({"pipeline_category_id": self.category_a.id, "type": "opportunity"}),
+            "alias_contact": "everyone",
+        })
+        # Emulate a row that predates the retirement; public creation is blocked.
+        return super(CrmPipelineCategoryAlias, self.env["crm.pipeline.category.alias"]).create({
+            "category_id": self.category_a.id, "alias_id": alias.id,
+            "alias_name": alias.alias_name, "alias_domain_id": domain.id,
+        })
+
+    def test_intake_tabs_and_email_hooks_are_removed(self):
+        form = etree.fromstring(self.Category.get_view(view_type="form")["arch"])
+        self.assertFalse(form.xpath("//page[@string='Incoming Email Addresses' or @string='Websites']"))
+        self.assertFalse(form.xpath("//field[@name='alias_ids' or @name='website_ids']"))
+        self.assertNotIn("alias_ids", self.Category._fields)
+        self.assertFalse(hasattr(self.env["mail.thread"], "_deduplicate_pipeline_category_routes"))
+
+    def test_retired_email_configuration_is_read_only(self):
+        legacy = self._legacy_email_configuration()
+        self.assertEqual(legacy.with_user(self.manager).alias_name, "retired-intake")
         with self.assertRaises(AccessError):
-            self.env["crm.pipeline.category.alias"].with_user(self.sales).create({
-                "category_id": self.category_shared.id,
-                "alias_name": "pc-sales-denied",
-                "alias_domain_id": domain.id,
-            })
+            legacy.with_user(self.sales).read(["alias_name"])
+        for operation in (
+            lambda: legacy.with_user(self.manager).write({"alias_name": "changed"}),
+            lambda: legacy.with_user(self.manager).unlink(),
+            lambda: legacy.with_user(self.manager).create({}),
+        ):
+            with self.assertRaises(AccessError):
+                operation()
+        for operation in (
+            lambda: legacy.write({"alias_name": "changed"}),
+            lambda: legacy.unlink(),
+            lambda: legacy.create({}),
+        ):
+            with self.assertRaises(UserError):
+                operation()
 
-    def test_category_email_address_validation(self):
-        domain = self.env["mail.alias.domain"].create({"name": "pc-pipeline-validation.example.test"})
-        with self.assertRaises(ValidationError):
-            self.env["crm.pipeline.category.alias"].create({
-                "category_id": self.category_a.id,
-                "alias_name": "not-an-address@example.test",
-                "alias_domain_id": domain.id,
-            })
+    def test_email_retirement_preserves_records_and_unrelated_aliases(self):
+        legacy = self._legacy_email_configuration()
+        lead = self._lead(self.category_a, name="PC Existing Classified")
+        fields = ["name", "pipeline_category_id", "stage_id", "company_id", "active", "write_date"]
+        before = lead.read(fields)
+        category_before = self.category_a.read(["s_name", "stage_ids", "company_id", "write_date"])
+        aliases = self.env["mail.alias"].search([("id", "!=", legacy.alias_id.id)])
+        native_before = aliases.read(["alias_name", "alias_defaults", "write_date"])
+        defaults = legacy.alias_id.alias_defaults
+        legacy._defer_intake()
+        self.assertTrue(legacy.exists())
+        self.assertTrue(legacy.alias_id.exists())
+        self.assertFalse(legacy.alias_id.alias_name)
+        self.assertEqual(legacy.s_deferred_alias_name, "retired-intake")
+        self.assertEqual(legacy.alias_id.alias_defaults, defaults)
+        self.assertEqual(lead.read(fields), before)
+        self.assertEqual(self.category_a.read(["s_name", "stage_ids", "company_id", "write_date"]), category_before)
+        self.assertEqual(aliases.read(["alias_name", "alias_defaults", "write_date"]), native_before)
+        retired_before = legacy.read(["s_deferred_alias_name", "write_date"])
+        native_retired_before = legacy.alias_id.read(["alias_name", "write_date"])
+        legacy._defer_intake()
+        self.assertEqual(legacy.read(["s_deferred_alias_name", "write_date"]), retired_before)
+        self.assertEqual(legacy.alias_id.read(["alias_name", "write_date"]), native_retired_before)
 
-    def test_incoming_email_gateway_deduplicates_categories_and_delivery(self):
-        domain = self.env["mail.alias.domain"].create({"name": "pc-gateway.example.test"})
-        aliases = self.env["crm.pipeline.category.alias"].create([
-            {"category_id": self.category_a.id, "alias_name": "intake", "alias_domain_id": domain.id},
-            {"category_id": self.category_a.id, "alias_name": "admissions", "alias_domain_id": domain.id},
-            {"category_id": self.category_shared.id, "alias_name": "renewals", "alias_domain_id": domain.id},
-        ])
+    def test_email_retirement_is_upgrade_only(self):
+        legacy = self._legacy_email_configuration()
+        with self.assertRaises(AccessError):
+            legacy.with_user(self.manager)._defer_intake()
+
+    def test_disabled_pipeline_alias_does_not_create_opportunity(self):
+        legacy = self._legacy_email_configuration()
+        legacy._defer_intake()
         message = EmailMessage()
-        message["From"] = "PC Gateway Visitor <pc-gateway-visitor@example.test>"
-        message["To"] = ", ".join(aliases.mapped("alias_full_name"))
-        message["Subject"] = "PC Gateway Multiple Pipelines"
-        message["Message-ID"] = "<pc-gateway-multiple-pipelines@example.test>"
-        message.set_content("Please contact me about these services.")
-        message.add_attachment(b"PC gateway attachment", maintype="text", subtype="plain", filename="request.txt")
-        gateway = self.env["mail.thread"].with_context(mail_notify_force_send=False)
-        gateway.message_process(None, message.as_bytes())
+        message["From"] = "pc-retired-visitor@example.test"
+        message["To"] = legacy.alias_full_name
+        message["Subject"] = "PC Retired Intake Must Not Create"
+        message["Message-ID"] = "<pc-retired-intake@example.test>"
+        message.set_content("This address is no longer offered.")
+        with self.assertRaises(ValueError):
+            self.env["mail.thread"].message_process(None, message.as_bytes())
+        self.assertFalse(self.Lead.search([("name", "=", message["Subject"])]))
 
-        leads = self.Lead.search([("name", "=", message["Subject"])])
-        self.assertEqual(len(leads), 2)
-        self.assertEqual(set(leads.pipeline_category_id.ids), set((self.category_a | self.category_shared).ids))
-        for lead in leads:
-            self.assertEqual(lead.type, "opportunity")
-            self.assertIn(lead.stage_id, lead.pipeline_category_id.stage_ids)
-            if lead.pipeline_category_id.company_id:
-                self.assertEqual(lead.company_id, lead.pipeline_category_id.company_id)
-            attachment = self.env["ir.attachment"].search([
-                ("res_model", "=", "crm.lead"), ("res_id", "=", lead.id), ("name", "=", "request.txt"),
-            ])
-            self.assertEqual(bytes(attachment.raw), b"PC gateway attachment")
-        self.assertFalse(gateway.message_process(None, message.as_bytes()))
-        self.assertEqual(self.Lead.search_count([("name", "=", message["Subject"])]), 2)
-
-    def test_incoming_email_reply_keeps_existing_pipeline_thread(self):
-        domain = self.env["mail.alias.domain"].create({"name": "pc-replies.example.test"})
-        alias = self.env["crm.pipeline.category.alias"].create({
-            "category_id": self.category_shared.id, "alias_name": "intake", "alias_domain_id": domain.id,
+    def test_native_email_and_reply_threading_remain_available(self):
+        domain = self.env["mail.alias.domain"].create({"name": "pc-native-mail.example.test"})
+        alias = self.env["mail.alias"].create({
+            "alias_name": "native-intake", "alias_domain_id": domain.id,
+            "alias_model_id": self.env["ir.model"]._get_id("crm.lead"),
+            "alias_defaults": repr({"type": "opportunity"}), "alias_contact": "everyone",
         })
         message = EmailMessage()
-        message["From"] = "PC Reply Visitor <pc-reply-visitor@example.test>"
+        message["From"] = "pc-native-visitor@example.test"
         message["To"] = alias.alias_full_name
-        message["Subject"] = "PC Gateway Reply Thread"
-        message["Message-ID"] = "<pc-gateway-reply-original@example.test>"
-        message.set_content("Initial inquiry.")
+        message["Subject"] = "PC Native Email Still Works"
+        message["Message-ID"] = "<pc-native-email@example.test>"
+        message.set_content("Native CRM intake.")
         gateway = self.env["mail.thread"].with_context(mail_notify_force_send=False)
         lead = gateway.message_process(None, message.as_bytes())
-
+        self.assertFalse(lead.pipeline_category_id)
+        self.assertEqual(lead.type, "opportunity")
         reply = EmailMessage()
         reply["From"] = message["From"]
         reply["To"] = message["To"]
-        reply["Subject"] = "Re: PC Gateway Reply Thread"
-        reply["Message-ID"] = "<pc-gateway-reply-followup@example.test>"
+        reply["Subject"] = "Re: PC Native Email Still Works"
+        reply["Message-ID"] = "<pc-native-email-reply@example.test>"
         reply["In-Reply-To"] = message["Message-ID"]
         reply["References"] = message["Message-ID"]
-        reply.set_content("A follow-up to the same inquiry.")
+        reply.set_content("Native reply.")
         self.assertEqual(gateway.message_process(None, reply.as_bytes()), lead)
-        self.assertEqual(lead.pipeline_category_id, self.category_shared)
         self.assertIn(reply["Message-ID"], lead.message_ids.mapped("message_id"))
-        self.assertEqual(self.Lead.search_count([("name", "=", message["Subject"])]), 1)
