@@ -327,7 +327,10 @@ class TestSalesTeamPipelineCategories(TransactionCase):
         lead = self._lead(self.category_a, expected_revenue=100)
         form = Form(lead, view="crm.crm_lead_view_form")
         form.expected_revenue = 4321
-        form.team_id = self.team_other
+        with self.assertLogs("odoo.tests.form.onchange", level="WARNING") as notification:
+            form.team_id = self.team_other
+        self.assertEqual(len(notification.output), 1)
+        self.assertRegex(notification.output[0], r"^WARNING:.*:Category not available to this team ")
         self.assertEqual(form.pipeline_category_id, self.category_a)
         self.assertEqual(lead.team_id, self.team_a)
         self.assertEqual(lead.expected_revenue, 100)
@@ -342,15 +345,19 @@ class TestSalesTeamPipelineCategories(TransactionCase):
 
     def test_stpc10_scoped_quick_create_exposes_team_and_keeps_category(self):
         action = self.category_a.action_open_pipeline()
-        with Form(self.Lead.with_context(
-            **action["context"], default_user_id=False, default_team_id=self.team_other.id,
-        ), view="crm.quick_create_opportunity_form") as form:
-            form.name = "STPC Quick Create"
-            self.assertEqual(form.pipeline_category_id, self.category_a)
-            form.team_id = self.team_a
-        self.assertEqual(form.record.team_id, self.team_a)
-        self.assertEqual(form.record.pipeline_category_id, self.category_a)
-        self.assertEqual(form.record.stage_id, self.stage_common)
+        with self.assertLogs("odoo.tests.form.onchange", level="WARNING") as notification:
+            form = Form(self.Lead.with_context(
+                **action["context"], default_user_id=False, default_team_id=self.team_other.id,
+            ), view="crm.quick_create_opportunity_form")
+        self.assertEqual(len(notification.output), 1)
+        self.assertRegex(notification.output[0], r"^WARNING:.*:Category not available to this team ")
+        form.name = "STPC Quick Create"
+        self.assertEqual(form.pipeline_category_id, self.category_a)
+        form.team_id = self.team_a
+        lead = form.save()
+        self.assertEqual(lead.team_id, self.team_a)
+        self.assertEqual(lead.pipeline_category_id, self.category_a)
+        self.assertEqual(lead.stage_id, self.stage_common)
 
     def test_stpc10_conversion_and_duplication(self):
         lead = self._lead(self.category_a, type="lead")
