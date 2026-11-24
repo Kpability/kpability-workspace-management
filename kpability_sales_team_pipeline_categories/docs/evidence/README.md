@@ -7,7 +7,7 @@ feature branch, including the merged PR #7 retirement and the writable
 category-side mapping, without unexpected page JavaScript errors. Raw runs and
 per-case videos are retained locally:
 
-- `/tmp/opencode/kpability-stpc-final-browser/20261124080403/` (current branch)
+- `/tmp/opencode/kpability-stpc-final-browser/20261124080609/` (current branch)
 - `/tmp/opencode/kpability-stpc-pr.t4szcPfV/browser-cleanup/20261123134557/`
   (earlier PR #7 retirement rehearsal; not the actual merged staging build)
 

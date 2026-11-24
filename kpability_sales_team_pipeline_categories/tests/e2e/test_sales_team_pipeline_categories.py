@@ -169,13 +169,15 @@ class SalesTeamPipelineBrowserTests(unittest.TestCase):
         expect(category_teams.locator("input")).to_be_visible()
         category_teams.locator("input").fill(self.team_names[1])
         self.page.get_by_role("option", name=self.team_names[1], exact=True).click()
-        expect(category_teams).to_contain_text(self.team_names[1])
-        self.page.screenshot(path=str(self.output / "STPC01-category-team-mapping.png"), full_page=True)
         self.page.get_by_role("button", name="Save manually", exact=True).click()
         self.wait_for(lambda: self.category in self.other_team_categories(), "category-side team link")
+        self.open_record("crm.pipeline.category", self.category)
+        category_teams = self.page.locator("[name='sales_team_ids']")
+        expect(category_teams).to_contain_text(self.team_names[0])
+        expect(category_teams).to_contain_text(self.team_names[1])
+        self.page.screenshot(path=str(self.output / "STPC01-category-team-mapping.png"), full_page=True)
         # Restore the original mapping so later cases keep the same fixtures.
         category_teams.locator(".o_tag", has_text=self.team_names[1]).locator(".o_delete").click()
-        expect(category_teams).not_to_contain_text(self.team_names[1])
         self.page.get_by_role("button", name="Save manually", exact=True).click()
         self.wait_for(lambda: self.category not in self.other_team_categories(), "category-side team unlink")
 

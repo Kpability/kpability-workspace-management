@@ -153,7 +153,7 @@ Raw maker logs are local under `/tmp/opencode/`.
 | --- | --- | --- |
 | Final combined branch with `20` at `80bbe6b` (PR #7 retirement included), fresh Enterprise demo database, all tagged suites | **90 checks, 0 failed, 0 errors** | `kpability-stpc-final-1534c71.log` |
 | Same final branch, fresh no-demo database, same tagged suites | **90 checks, 0 failed, 0 errors** | `kpability-stpc-final-nodemo.log` |
-| Same final branch, Playwright `debug=assets`, category-side mapping included | **7/7 passed**, no unexpected page JavaScript errors | `kpability-stpc-final-browser.log`, `browser/20261124080403/` |
+| Same final branch, Playwright `debug=assets`, category-side mapping included | **7/7 passed**, no unexpected page JavaScript errors | `kpability-stpc-final-browser.log`, `browser/20261124080609/` |
 | Fresh consumer + Enterprise + CRM Stage Reasons, no website companion | **37 passed**, including all 35 authored STPC methods | `fresh.log` |
 | Same-version consumer update on the fresh database | **35 passed** | `fresh-update.log` |
 | Category base + Enterprise, no team consumer | **45 passed**, including 43 authored base tests | `base-only.log` |
