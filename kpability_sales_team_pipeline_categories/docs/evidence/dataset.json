@@ -22,7 +22,7 @@
   ],
   "lead": 106,
   "cases": [
-    "test_01_native_team_configuration_and_read_only_inverse",
+    "test_01_native_team_configuration_and_category_mapping",
     "test_02_category_dropdown_intersects_team_mapping",
     "test_03_dirty_form_discard_and_explicit_reclassification",
     "test_04_invalid_save_and_rpc_are_atomic",

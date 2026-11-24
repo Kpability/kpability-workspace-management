@@ -14,7 +14,7 @@ Approved policies replace the old proposal in `docs/development/`:
 
 | Decision | Implemented policy |
 | --- | --- |
-| Cardinality | One authoritative `crm.team.pipeline_category_ids` M2M; read-only `crm.pipeline.category.sales_team_ids` inverse on `crm_team_pipeline_category_rel(team_id,category_id)` |
+| Cardinality | One authoritative `crm.team.pipeline_category_ids` M2M; editable `crm.pipeline.category.sales_team_ids` inverse on `crm_team_pipeline_category_rel(team_id,category_id)`, with category-side edits routed through the team field and its protections |
 | Empty/missing team | No new categorized assignments; unclassified native CRM remains possible |
 | Defaults | No automatic category, inferred mapping or backfill |
 | Company | Companyless teams map only shared categories; company-specific teams map shared/own-company categories; CRM access/company rules still apply |
@@ -166,7 +166,7 @@ Historical PR #4/#7 results are not counted in the table.
 
 | Cases | Authored coverage |
 | --- | --- |
-| STPC01 | M2M/inverse round-trip, authoritative-side enforcement including sudo/RPC, copy behavior |
+| STPC01 | M2M round-trip and category-side editing, authoritative-side protections including sudo/RPC, copy behavior |
 | STPC02 | Draft team-dependent options, active mapping eligibility, no hidden defaults |
 | STPC03 | Category/native team stage intersection, scoped board columns, native bulk Won/Lost/restore |
 | STPC04 | Compatible and rejected team changes, explicit reclassification/clear, native stage recompute, non-blocking warning |

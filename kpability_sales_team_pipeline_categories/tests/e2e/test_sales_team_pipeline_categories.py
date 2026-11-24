@@ -141,7 +141,7 @@ class SalesTeamPipelineBrowserTests(unittest.TestCase):
     def persisted(self, lead):
         return self.call("crm.lead", "read", [[lead], ["team_id", "pipeline_category_id", "expected_revenue"]])[0]
 
-    def test_01_native_team_configuration_and_read_only_inverse(self):
+    def test_01_native_team_configuration_and_category_mapping(self):
         self.open_record("crm.team", self.team)
         self.page.get_by_role("tab", name="Pipeline Categories", exact=True).click()
         mapping = self.page.locator("[name='pipeline_category_ids']")
@@ -150,9 +150,20 @@ class SalesTeamPipelineBrowserTests(unittest.TestCase):
         expect(mapping.locator("input")).to_be_visible()
         self.page.screenshot(path=str(self.output / "STPC01-team-mapping.png"), full_page=True)
         self.open_record("crm.pipeline.category", self.category)
-        inverse = self.page.locator("[name='sales_team_ids']")
-        expect(inverse).to_contain_text(self.team_names[0])
-        expect(inverse.locator("input")).to_have_count(0)
+        category_teams = self.page.locator("[name='sales_team_ids']")
+        expect(category_teams).to_contain_text(self.team_names[0])
+        expect(category_teams.locator("input")).to_be_visible()
+        category_teams.locator("input").fill(self.team_names[1])
+        self.page.get_by_role("option", name=self.team_names[1], exact=True).click()
+        self.page.screenshot(path=str(self.output / "STPC01-category-team-mapping.png"), full_page=True)
+        self.page.get_by_role("button", name="Save manually", exact=True).click()
+        stored = self.call("crm.team", "read", [[self.other_team], ["pipeline_category_ids"]])[0]
+        self.assertIn(self.category, stored["pipeline_category_ids"])
+        # Restore the original mapping so later cases keep the same fixtures.
+        category_teams.locator(".o_tag", has_text=self.team_names[1]).locator(".o_delete").click()
+        self.page.get_by_role("button", name="Save manually", exact=True).click()
+        stored = self.call("crm.team", "read", [[self.other_team], ["pipeline_category_ids"]])[0]
+        self.assertNotIn(self.category, stored["pipeline_category_ids"])
 
     def test_02_category_dropdown_intersects_team_mapping(self):
         self.open_record("crm.lead", self.lead)

@@ -6,7 +6,8 @@
 
 Add `kpability_sales_team_pipeline_categories` (`20.0.1.0.0`) as an optional
 Odoo 20 add-on. Sales Managers explicitly map eligible categories on native sales
-teams; the category form shows a read-only inverse. CRM filters the Category
+teams; the category form offers the same editable mapping from the category
+side, with team-side protections still enforced. CRM filters the Category
 dropdown by team/company and rejects invalid saves, imports and RPC changes
 without silently replacing the category. Category-scoped quick-create exposes
 Sales Team, and a read-only compatibility report helps managers find existing
@@ -35,7 +36,7 @@ ORM tests, not a selected-company browser walkthrough.
 
 | Case | Expected and observed result | Evidence |
 | --- | --- | --- |
-| STPC01–02 | Mappings round-trip; inverse is read-only; unmapped categories do not appear. **Passed**, ORM + browser. | [Mapping](evidence/stpc01-team-mapping.png), [inverse](evidence/stpc01-read-only-inverse.png), [dropdown](evidence/stpc02-team-category-options.png) |
+| STPC01–02 | Mappings round-trip from both configuration forms; category-side removals still enforce used-history and company protections; unmapped categories do not appear. **Passed**, ORM + browser. | [Mapping](evidence/stpc01-team-mapping.png), [category-side mapping](evidence/stpc01-category-team-mapping.png), [dropdown](evidence/stpc02-team-category-options.png) |
 | STPC03, STPC06–07 | Native stage and Won/Lost behavior retained; category remains optional; used mappings and archived history protected. **Passed**, ORM. | [Cases and commands](sales-team-pipeline-categories.md#verification-record) |
 | STPC04–05 | Incompatible saves, imports and RPC writes fail without changing the stored record. **Passed**, ORM + browser. | [Rejected save](evidence/stpc04-invalid-save.png) |
 | STPC08 | Restricted salesperson sees the mapping read-only; backend denies writes and mapping grants no access. **Passed**, ORM + browser. | [Salesperson view](evidence/stpc08-sales-read-only.png) |

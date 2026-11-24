@@ -91,12 +91,32 @@ class TestSalesTeamPipelineCategories(TransactionCase):
         self.team_other.write({"pipeline_category_ids": [Command.unlink(self.category_a.id)]})
         self.assertNotIn(self.team_other, self.category_a.sales_team_ids)
 
-    def test_stpc01_inverse_is_protected_for_rpc_create_write_and_copy(self):
-        for category in (self.category_shared, self.category_shared.sudo()):
-            with self.assertRaises(UserError):
-                category.write({"sales_team_ids": [Command.clear()]})
-        with self.assertRaises(UserError):
-            self.Category.create({"s_name": "STPC Spoof", "sales_team_ids": [Command.link(self.team_a.id)]})
+    def test_stpc01_category_side_mapping_edits_and_copy(self):
+        self.assertEqual(self.category_a.sales_team_ids, self.team_a)
+        self.category_a.with_user(self.manager).write({
+            "sales_team_ids": [Command.link(self.team_other.id)],
+        })
+        self.assertIn(self.category_a, self.team_other.pipeline_category_ids)
+        self.category_a.write({"sales_team_ids": [Command.unlink(self.team_other.id)]})
+        self.assertNotIn(self.category_a, self.team_other.pipeline_category_ids)
+
+        created = self.Category.create({
+            "s_name": "STPC Category Side",
+            "company_id": self.company_a.id,
+            "sales_team_ids": [Command.set(self.team_empty.ids)],
+        })
+        self.assertEqual(created.sales_team_ids, self.team_empty)
+        self.assertIn(created, self.team_empty.pipeline_category_ids)
+
+        with self.assertRaises(ValidationError), self.env.cr.savepoint():
+            created.write({"sales_team_ids": [Command.link(self.team_b.id)]})
+        self.assertEqual(created.sales_team_ids, self.team_empty)
+
+        self._lead(self.category_a)
+        with self.assertRaises(ValidationError), self.env.cr.savepoint():
+            self.category_a.write({"sales_team_ids": [Command.unlink(self.team_a.id)]})
+        self.assertIn(self.team_a, self.category_a.sales_team_ids)
+
         copied = self.category_a.copy({"s_name": "STPC Category Copy"})
         self.assertFalse(copied.sales_team_ids)
         self.assertFalse(self.team_a.copy({"name": "STPC Team Copy"}).pipeline_category_ids)

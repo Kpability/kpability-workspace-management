@@ -8,8 +8,10 @@
 > The text below is the preserved original proposal, not the current contract:
 > in particular all CRM history (not just active records) protects mappings,
 > shared categories/companyless teams follow the approved explicit policy, and
-> the inverse is read-only. Team review can proceed now; rollout waits for PR #7
-> to merge through `20`, followed by the retirement upgrade and a staging smoke test.
+> both the team and category forms edit the same mapping (category-side edits
+> still run the team-side protections). Team review can proceed now; rollout
+> waits for PR #7 to merge through `20`, followed by the retirement upgrade and
+> a staging smoke test.
 
 | Item | Plan |
 | --- | --- |
@@ -81,7 +83,7 @@ Use the approved base category model (`crm.pipeline.category` is only a proposal
 | Proposed extension | Purpose |
 | --- | --- |
 | `pipeline_category_ids` on sales team | Many2many to base category model, maintained by authorized editors |
-| `sales_team_ids` on category | Optional inverse view over the **same** relation table, not an independently stored list |
+| `sales_team_ids` on category | Editable view over the **same** relation table, not an independently stored list; writes are routed through `crm.team.pipeline_category_ids` |
 | Native team relation on CRM record | Source of team context; verify actual field and assignment lifecycle on Odoo 20 |
 | Base category relation on CRM record | Selected category; validated against the team mapping when membership is enforced |
 | Optional `default_pipeline_category_id` | Add only after STPC-D4 approval; never let it imply cross-company eligibility |
@@ -135,7 +137,7 @@ Fixtures: companies A/B; editor and restricted sales users; teams Alpha/Beta; ca
 
 | Case | Steps / condition | Expected acceptance result | Verification / visual proof |
 | --- | --- | --- | --- |
-| STPC-01 | Map Shared to Alpha and Beta; map Alpha-only to Alpha; reopen both configuration views | Many-to-many relation persists and inverse views agree | ORM relation tests + configuration screenshots |
+| STPC-01 | Map Shared to Alpha and Beta; map Alpha-only to Alpha; reopen both configuration views; add/remove a team from the category form | Many-to-many relation persists and both views agree, including used-history protection | ORM relation tests + configuration screenshots |
 | STPC-02 | Select Alpha then Beta on a new CRM record | Only approved active categories for that team/company are offered | Browser + team/category selection recording |
 | STPC-03 | Select a category then inspect stages and Kanban | Category and native team restrictions intersect; no incompatible stage appears or saves | ORM + stage/board evidence |
 | STPC-04 | Change team with compatible, then incompatible, category/stage | Compatible values remain; incompatible save is blocked until explicit replacement; no silent loss | Browser warning/save/reopen sequence + ORM |

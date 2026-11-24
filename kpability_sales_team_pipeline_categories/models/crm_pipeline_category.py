@@ -1,4 +1,4 @@
-from odoo import _, api, fields, models
+from odoo import Command, _, api, fields, models
 from odoo.exceptions import UserError, ValidationError
 
 
@@ -12,21 +12,66 @@ class CrmPipelineCategory(models.Model):
         "team_id",
         string="Sales Teams",
         context={"active_test": False},
-        readonly=True,
         copy=False,
-        help="Read-only inverse. Manage category eligibility from Sales Teams; archiving preserves these mappings.",
+        help="Teams allowed to use this category. Both this form and Sales Teams edit the same mapping; "
+             "team-side protections for used history and company scope still apply. "
+             "Company-specific categories only accept teams of that company; shared categories accept any team.",
     )
 
     @api.model_create_multi
     def create(self, vals_list):
-        if any("sales_team_ids" in vals for vals in vals_list):
-            raise UserError(_("Manage pipeline category mappings from Sales Teams, not from categories."))
-        return super().create(vals_list)
+        team_commands = []
+        clean_vals_list = []
+        for vals in vals_list:
+            vals = dict(vals)
+            team_commands.append(vals.pop("sales_team_ids", None))
+            clean_vals_list.append(vals)
+        categories = super().create(clean_vals_list)
+        for category, commands in zip(categories, team_commands):
+            if commands:
+                category._set_sales_team_ids(commands)
+        return categories
 
     def write(self, vals):
-        if "sales_team_ids" in vals:
-            raise UserError(_("Manage pipeline category mappings from Sales Teams, not from categories."))
-        return super().write(vals)
+        commands = vals.get("sales_team_ids")
+        vals = dict(vals)
+        vals.pop("sales_team_ids", None)
+        result = super().write(vals)
+        if commands:
+            for category in self:
+                category._set_sales_team_ids(commands)
+        return result
+
+    def _set_sales_team_ids(self, commands):
+        """Apply category-side edits through the authoritative team field.
+
+        The relation table is shared, but routing writes through ``crm.team``
+        keeps its access checks, active-category check, company-scope constraint
+        and all-history removal protection in force.
+        """
+        self.ensure_one()
+        current = self.sales_team_ids.with_context(active_test=False)
+        target = current
+        for command in commands:
+            code = command[0]
+            if code == Command.LINK:
+                target |= self.env["crm.team"].browse(command[1])
+            elif code == Command.UNLINK:
+                target -= self.env["crm.team"].browse(command[1])
+            elif code == Command.SET:
+                target = self.env["crm.team"].browse(command[2])
+            elif code == Command.CLEAR:
+                target = self.env["crm.team"]
+            elif code == Command.CREATE:
+                raise UserError(_("Create the sales team from Sales Teams, then map it here."))
+            else:
+                raise UserError(_("Unsupported sales-team mapping command."))
+        added = target - current
+        if added:
+            added.write({"pipeline_category_ids": [Command.link(self.id)]})
+        removed = current - target
+        if removed:
+            removed.write({"pipeline_category_ids": [Command.unlink(self.id)]})
 
     @api.constrains("company_id")
     def _check_sales_team_company_scope(self):

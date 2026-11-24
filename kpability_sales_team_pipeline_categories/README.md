@@ -10,6 +10,9 @@ category model, new roles, or category-based record access.
    on the add-on path. Only the base category add-on is a dependency.
 2. As a native **Sales Manager**, open **CRM → Configuration → Sales Teams**.
    On **Pipeline Categories**, explicitly map the team's permitted categories.
+   The equivalent **Sales Teams** field on
+   **CRM → Configuration → Pipeline → Pipeline Categories** edits the same
+   mapping from the category side.
 3. A company-specific team may map shared categories and its own company's
    categories. A companyless team may map shared categories only.
 4. Review **CRM → Configuration → Pipeline → Pipeline Team Compatibility**
@@ -20,9 +23,12 @@ category model, new roles, or category-based record access.
    Installation and upgrades do **not** infer mappings, choose categories, reset
    stages, or backfill existing CRM records.
 
-The category form shows the read-only **Sales Teams** inverse. All configuration
-writes go through the team, including imports/RPC. No extra ACLs are necessary:
-native team permissions and the base category record rules remain authoritative.
+The category form also lets Sales Managers add or remove **Sales Teams**. Both
+forms edit the same relation, and category-side writes are routed through the
+team field, so its active-category, company-scope and used-history protections
+still apply. Imports/RPC use the same checks. No extra ACLs are necessary:
+native team write permissions and the base category record rules remain
+authoritative.
 
 ## CRM behavior
 
