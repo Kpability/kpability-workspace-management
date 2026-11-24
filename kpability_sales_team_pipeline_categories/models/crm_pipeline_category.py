@@ -17,6 +17,16 @@ class CrmPipelineCategory(models.Model):
              "team-side protections for used history and company scope still apply. "
              "Company-specific categories only accept teams of that company; shared categories accept any team.",
     )
+    s_can_edit_sales_teams = fields.Boolean(
+        string="Can Edit Sales Teams",
+        compute="_compute_s_can_edit_sales_teams",
+    )
+
+    @api.depends_context("uid")
+    def _compute_s_can_edit_sales_teams(self):
+        can_write = self.env.user.has_group("sales_team.group_sale_manager")
+        for category in self:
+            category.s_can_edit_sales_teams = can_write
 
     @api.model_create_multi
     def create(self, vals_list):

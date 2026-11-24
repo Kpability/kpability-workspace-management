@@ -331,6 +331,12 @@ class TestSalesTeamPipelineCategories(TransactionCase):
             self.team_a.with_user(self.sales).write({"pipeline_category_ids": [Command.clear()]})
         self.team_empty.with_user(self.manager).write({"pipeline_category_ids": [Command.link(self.category_shared.id)]})
         self.assertIn(self.category_shared, self.team_empty.pipeline_category_ids)
+        self.assertFalse(self.category_a.with_user(self.sales).s_can_edit_sales_teams)
+        self.assertTrue(self.category_a.with_user(self.manager).s_can_edit_sales_teams)
+        with self.assertRaises(AccessError):
+            self.category_a.with_user(self.sales).write({
+                "sales_team_ids": [Command.link(self.team_other.id)],
+            })
 
     def test_stpc08_mapping_does_not_grant_record_access(self):
         lead = self._lead(self.category_shared, user_id=self.manager.id)

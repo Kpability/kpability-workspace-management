@@ -5,10 +5,11 @@
 Implementation began November 13, 2026 on the existing
 `feature/sales-team-pipeline-categories` branch after incorporating approved
 `origin/20` at `cf54708dd35761c9a3e09d27a0bb2aa711f4b378` (merged PR #4).
-The November 23 PR preparation incorporates `origin/20` at
-`c670310240a76e775afcdce3877db3f3ad40ac88` (includes merged CRM Stage Reasons).
-The foundation is independent for review; PR #7 is a rollout gate, not a
-manifest dependency or part of this branch.
+The November 24 update incorporates `origin/20` at
+`80bbe6b` (PR #7 legacy-intake retirement merged) and adds category-side team
+mapping while keeping one authoritative relation. The add-on is independently
+reviewable; the retirement upgrade and a merged staging smoke test remain
+rollout gates, not manifest dependencies.
 
 Approved policies replace the old proposal in `docs/development/`:
 
@@ -43,12 +44,13 @@ this foundation. Business choices are records, not hard-coded selections.
 
 | Component | Revision / requirement |
 | --- | --- |
+| Target branch, `20` | `80bbe6b` on November 24, 2026, after the PR #7 retirement merge; feature branch includes this merge |
 | Official Odoo Community source, `20.0` | `24f007f4f8a2dbdab05c1b4aecf48bd4e9c4251e`, sibling `../odoo`, official GitHub origin |
 | Official Enterprise source, `20.0` | `7773cfc038583d1b664491128424cd1904be946c`, sibling `../enterprise`, official GitHub origin |
 | Python | CPython 3.12.14; target source supports 3.12–3.14 |
-| PostgreSQL | PostgreSQL 16.15, dedicated local container on loopback port 55421 |
+| PostgreSQL | PostgreSQL 16.15, dedicated disposable local container on loopback |
 | Edition | Runtime `20.0+e`, with `web_enterprise` and `crm_enterprise` installed; browser setup asserts both edition and modules |
-| Add-ons | Team consumer `20.0.1.0.0` (LGPL-3), category base `20.0.1.1.0`, CRM Stage Reasons `20.0.1.0.0`; cleanup verification uses the versions below |
+| Add-ons | Team consumer `20.0.1.0.0` (LGPL-3), category base `20.0.1.2.0`, website companion `20.0.1.1.0` when installed, CRM Stage Reasons `20.0.1.0.0`, keyword assignment `20.0.1.1.0` |
 
 Native APIs inspected: stored/precomputed team selection, user-driven team
 recomputation, computed company and stage, CRM `create/write`, native
@@ -144,11 +146,14 @@ to overwrite an existing baseline or use a snapshot outside `/tmp/opencode`.
 
 ## Verification record
 
-Re-run locally on November 23, 2026, on the source/runtime baseline above. Raw
-maker logs are local at `/tmp/opencode/kpability-stpc-pr.t4szcPfV/`.
+Re-run locally on November 23–24, 2026, on the source/runtime baseline above.
+Raw maker logs are local under `/tmp/opencode/`.
 
 | Run | Result | File in the local run directory |
 | --- | --- | --- |
+| Final combined branch with `20` at `80bbe6b` (PR #7 retirement included), fresh Enterprise demo database, all tagged suites | **90 checks, 0 failed, 0 errors** | `kpability-stpc-final-1534c71.log` |
+| Same final branch, fresh no-demo database, same tagged suites | **90 checks, 0 failed, 0 errors** | `kpability-stpc-final-nodemo.log` |
+| Same final branch, Playwright `debug=assets`, category-side mapping included | **7/7 passed**, no unexpected page JavaScript errors | `kpability-stpc-final-browser.log`, `browser/20261124080403/` |
 | Fresh consumer + Enterprise + CRM Stage Reasons, no website companion | **37 passed**, including all 35 authored STPC methods | `fresh.log` |
 | Same-version consumer update on the fresh database | **35 passed** | `fresh-update.log` |
 | Category base + Enterprise, no team consumer | **45 passed**, including 43 authored base tests | `base-only.log` |
@@ -188,7 +193,9 @@ checker approval, a full native CRM suite, or Odoo.sh/client UAT certification.
 Use a separate synthetic database and a separate, disposable source tree. The
 rehearsal integrated PR #7 head `b1f21eea6c1e8f0d3157d34e2856163dd36c49f9`
 with feature source `c5015546d4de1e65e015122b07519533c007986f` (no changes to
-the feature's production code). It did **not** merge PR #7 into the branch.
+the feature's production code). That rehearsal did **not** merge PR #7 into the
+feature branch. The November 24 branch update later merged the approved `20`
+head, including PR #7, as recorded above.
 
 1. With approved base code, install category base `20.0.1.1.0` and legacy
    website companion `20.0.1.0.0` alongside Enterprise and CRM Stage Reasons.

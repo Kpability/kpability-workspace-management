@@ -1,14 +1,15 @@
 # Sales Team Pipeline Categories — local maker evidence
 
-Synthetic data only. Captured November 23, 2026, using Playwright 1.65.0,
+Synthetic data only. Captured November 23–24, 2026, using Playwright 1.65.0,
 Chromium 158.0.8127.18 and Odoo `20.0+e` in `debug=assets` mode with Enterprise
 web/CRM and CRM Stage Reasons installed. The seven browser tests passed on the
-feature branch and again on a separate local rehearsal of the PR #7 cleanup
-upgrade, without unexpected page JavaScript errors. Raw runs and per-case
-videos are retained locally:
+feature branch, including the merged PR #7 retirement and the writable
+category-side mapping, without unexpected page JavaScript errors. Raw runs and
+per-case videos are retained locally:
 
-- `/tmp/opencode/kpability-stpc-pr.t4szcPfV/browser-fresh/20261123134556/`
+- `/tmp/opencode/kpability-stpc-final-browser/20261124080403/` (current branch)
 - `/tmp/opencode/kpability-stpc-pr.t4szcPfV/browser-cleanup/20261123134557/`
+  (earlier PR #7 retirement rehearsal; not the actual merged staging build)
 
 | File | Case / observation |
 | --- | --- |

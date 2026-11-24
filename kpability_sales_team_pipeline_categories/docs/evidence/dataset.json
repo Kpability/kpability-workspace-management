@@ -1,26 +1,27 @@
 {
   "server_version": "20.0+e",
   "browser": "158.0.8127.18",
-  "database": "kpability_pipeline_stpc_pr_fresh",
+  "database": "kpability_pipeline_stpc_final_1534c71",
   "debug_assets": true,
   "modules": {
     "crm_enterprise": "20.0.1.0",
     "crm_stage_reasons": "20.0.1.0.0",
-    "kpability_pipeline_categories": "20.0.1.1.0",
+    "kpability_pipeline_categories": "20.0.1.2.0",
     "kpability_sales_team_pipeline_categories": "20.0.1.0.0",
+    "kpability_website_pipeline_categories": "20.0.1.1.0",
     "web_enterprise": "20.0.1.0"
   },
-  "run_id": "20261123134556",
+  "run_id": "20261124080403",
   "teams": [
-    22,
-    23
+    18,
+    19
   ],
   "categories": [
-    15,
-    16,
-    17
+    28,
+    29,
+    30
   ],
-  "lead": 106,
+  "lead": 195,
   "cases": [
     "test_01_native_team_configuration_and_category_mapping",
     "test_02_category_dropdown_intersects_team_mapping",

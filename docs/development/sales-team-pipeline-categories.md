@@ -1,6 +1,6 @@
 # Development plan: Sales team pipeline categories
 
-> **Implementation update — November 23, 2026:** the approved team foundation is
+> **Implementation update — November 24, 2026:** the approved team foundation is
 > now implemented in the root `kpability_sales_team_pipeline_categories` add-on.
 > See its [implementation and verification record](../../kpability_sales_team_pipeline_categories/docs/sales-team-pipeline-categories.md)
 > and [PR draft](../../kpability_sales_team_pipeline_categories/docs/pull-request-draft.md)
@@ -9,9 +9,10 @@
 > in particular all CRM history (not just active records) protects mappings,
 > shared categories/companyless teams follow the approved explicit policy, and
 > both the team and category forms edit the same mapping (category-side edits
-> still run the team-side protections). Team review can proceed now; rollout
-> waits for PR #7 to merge through `20`, followed by the retirement upgrade and
-> a staging smoke test.
+> still run the team-side protections). PR #7's retirement is merged into `20`
+> at `80bbe6b`, and this branch includes it. Team review can proceed; rollout
+> still requires the retirement upgrade on the deployment copy, a staging smoke
+> test, and independent sign-off.
 
 | Item | Plan |
 | --- | --- |

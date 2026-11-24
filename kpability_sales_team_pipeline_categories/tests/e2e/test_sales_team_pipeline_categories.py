@@ -8,6 +8,7 @@ import json
 import os
 import re
 import secrets
+import time
 import unittest
 from datetime import datetime, timezone
 from pathlib import Path
@@ -141,6 +142,19 @@ class SalesTeamPipelineBrowserTests(unittest.TestCase):
     def persisted(self, lead):
         return self.call("crm.lead", "read", [[lead], ["team_id", "pipeline_category_id", "expected_revenue"]])[0]
 
+    def wait_for(self, check, label):
+        deadline = time.monotonic() + 10
+        while time.monotonic() < deadline:
+            if check():
+                return
+            self.page.wait_for_timeout(250)
+        self.fail(f"Timed out waiting for {label}")
+
+    def other_team_categories(self):
+        return self.call(
+            "crm.team", "read", [[self.other_team], ["pipeline_category_ids"]]
+        )[0]["pipeline_category_ids"]
+
     def test_01_native_team_configuration_and_category_mapping(self):
         self.open_record("crm.team", self.team)
         self.page.get_by_role("tab", name="Pipeline Categories", exact=True).click()
@@ -155,15 +169,15 @@ class SalesTeamPipelineBrowserTests(unittest.TestCase):
         expect(category_teams.locator("input")).to_be_visible()
         category_teams.locator("input").fill(self.team_names[1])
         self.page.get_by_role("option", name=self.team_names[1], exact=True).click()
+        expect(category_teams).to_contain_text(self.team_names[1])
         self.page.screenshot(path=str(self.output / "STPC01-category-team-mapping.png"), full_page=True)
         self.page.get_by_role("button", name="Save manually", exact=True).click()
-        stored = self.call("crm.team", "read", [[self.other_team], ["pipeline_category_ids"]])[0]
-        self.assertIn(self.category, stored["pipeline_category_ids"])
+        self.wait_for(lambda: self.category in self.other_team_categories(), "category-side team link")
         # Restore the original mapping so later cases keep the same fixtures.
         category_teams.locator(".o_tag", has_text=self.team_names[1]).locator(".o_delete").click()
+        expect(category_teams).not_to_contain_text(self.team_names[1])
         self.page.get_by_role("button", name="Save manually", exact=True).click()
-        stored = self.call("crm.team", "read", [[self.other_team], ["pipeline_category_ids"]])[0]
-        self.assertNotIn(self.category, stored["pipeline_category_ids"])
+        self.wait_for(lambda: self.category not in self.other_team_categories(), "category-side team unlink")
 
     def test_02_category_dropdown_intersects_team_mapping(self):
         self.open_record("crm.lead", self.lead)
@@ -254,6 +268,10 @@ class SalesTeamPipelineBrowserTests(unittest.TestCase):
             page.get_by_role("tab", name="Pipeline Categories", exact=True).click()
             expect(page.locator("[name='pipeline_category_ids']")).to_contain_text(self.category_names[0])
             expect(page.locator("[name='pipeline_category_ids'] input")).to_have_count(0)
+            self.open_backend(page, f"crm.pipeline.category/{self.category}")
+            page.locator(".o_form_view").wait_for()
+            expect(page.locator("[name='sales_team_ids']")).to_contain_text(self.team_names[0])
+            expect(page.locator("[name='sales_team_ids'] input")).to_have_count(0)
             page.screenshot(path=str(self.output / "STPC08-sales-read-only.png"), full_page=True)
         finally:
             client.close()
