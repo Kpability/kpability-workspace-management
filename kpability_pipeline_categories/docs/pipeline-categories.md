@@ -2,12 +2,12 @@
 
 | Item | Recorded baseline |
 | --- | --- |
-| Branch / add-on | `feature/pipeline-categories` / `kpability_pipeline_categories` |
-| Version / license | `20.0.1.1.0` / LGPL-3 |
+| Branch / add-on | `fix/defer-pipeline-website-email` / `kpability_pipeline_categories` |
+| Version / license | `20.0.1.2.0` / LGPL-3 |
 | Owner / checker | Fyke / independent checker to confirm with Sir Roy |
 | Source delivery target | November 13, 2026 (S1 p.1), not a release approval |
-| Status | Implemented; locally tested November 12, 2026; integration/review gates remain |
-| Publication | Stacked on PR [#4](https://github.com/Kpability/kpability-workspace-management/pull/4) after local validation; Odoo.sh/client validation remains pending |
+| Status | Core CRM retained; website/email intake deferred November 13, 2026 |
+| Publication | Follow-up to merged PR [#4](https://github.com/Kpability/kpability-workspace-management/pull/4), based on `20`; deferred work tracked in [issue #6](https://github.com/Kpability/kpability-workspace-management/issues/6) |
 
 This replaces the earlier proposal. Read [shared standards](../../docs/development/shared-standards.md)
 for S1–S4/U1, ownership, security, evidence and release requirements, and the
@@ -46,10 +46,9 @@ attributed to the PDFs:
   access and the operational overview.
 - Simplified category stage UI hides Sales Teams, Is Won and Folded; those native
   fields and semantics are retained on the native stage views/actions.
-- Optional `kpability_website_pipeline_categories` lets a website visitor select
-  one or more available pipelines; one submission creates one opportunity per
-  selected pipeline. Incoming email aliases can route one or more addresses into
-  each pipeline, with duplicate suppression inside a single pipeline.
+- Website forms and incoming-email integrations from PR #4 are **deferred**.
+  Only a non-functional compatibility layer remains for safe upgrades; neither
+  feature is offered in the current CRM-only delivery.
 - Local **Odoo 20 Enterprise** development/testing, then authorized Odoo.sh
   integration/UAT. No deployment is implied by local implementation.
 
@@ -70,7 +69,7 @@ open/conflicting when inspected and is not a dependency or merged component.
 | Python / PostgreSQL | CPython **3.12.14** / PostgreSQL **16.15** |
 | Browser | Playwright **1.65.0**, Chromium **158.0.8127.18** |
 | Local database service | Dedicated `kpability-odoo20-db`, volume `kpability-odoo20-pgdata`, loopback port **55420** |
-| Local browser endpoint | `http://127.0.0.1:18020`, disposable database `kpability_pipeline_dev` |
+| Current local browser endpoint | `http://127.0.0.1:18027`, disposable database `kpability_pipeline_defer_fresh` |
 
 This is an Enterprise development/trial database, not a claim of production
 license activation. The Enterprise checkout alone is not an Odoo server; the
@@ -102,8 +101,8 @@ Native findings driving the implementation:
 | `stage_ids` | Authoritative editable mapping to existing native stages |
 | `s_normalized_name` | Stored canonical-name uniqueness helper; precomputed on insert |
 | `lead_count` | Active-opportunity count in the configuration list; respects lead ACL/company rules |
-| `alias_ids` | Optional incoming email addresses for this pipeline |
-| `crm.pipeline.category.alias` | Mapping that owns a native `mail.alias` and its category defaults |
+| `crm.pipeline.category.alias` | Read-only historical configuration, retained solely for safe upgrades; no category `alias_ids` field/UI |
+| `s_deferred_alias_name` | Exact previous native alias name retained when the owned alias is disabled |
 | `crm.lead.pipeline_category_id` | Optional, indexed, tracked, `check_company=True`, restricted deletion; displayed as **Category** |
 | `crm.lead.pipeline_category_stage_ids` | Related stage set used by native field domains |
 | `crm.stage.pipeline_category_ids` | Read-only inverse using the same relation table |
@@ -123,14 +122,19 @@ native CRM board action with a hard category domain and category-scoped stage
 columns. Configuration remains in **CRM → Configuration → Pipeline → Pipeline
 Categories**; the former Sales configuration duplicate is removed on upgrade.
 
-`crm.pipeline.category.alias` owns a native `mail.alias` whose defaults set
-`pipeline_category_id` and `type=opportunity`. All aliases for a category point
-to the same pipeline. `mail.thread.message_route` is extended to suppress two
-routes that resolve to the same category for one incoming message; routes to
-different categories are preserved.
-Native `crm.lead.message_new()` receives the category's current company for a
-company-specific pipeline when no company was explicitly supplied. Native
-reply threading and repeated Message-ID suppression remain in place.
+The `20.0.1.2.0` migration retains historical alias rows and their original
+configuration, records the exact native alias name, and clears only the owned
+native aliases' `alias_name` so they no longer receive new messages. It is
+idempotent and leaves unrelated native aliases alone. The custom
+`mail.thread.message_route` and `crm.lead.message_new` overrides are removed.
+Normal native email processing and reply threading remain available.
+
+The retired website module retains existing `website_ids` mappings and XML IDs,
+but no Websites tab, editor block, category-list endpoint or fan-out behavior.
+Old template references render a non-interactive notice; copied forms are
+disabled and stale pipeline-specific POSTs are rejected. Native website forms
+are not disabled. A hidden empty notebook remains only as an inheritance anchor
+while older installed website companions complete their upgrade.
 
 Sales users read permitted categories; Sales Managers configure them. A global
 company rule allows shared categories and selected allowed companies. Shared
@@ -169,7 +173,8 @@ kpability_pipeline_categories/
   docs/pipeline-categories.md
   docs/evidence/
   models/crm_pipeline_category.py, crm_pipeline_category_alias.py,
-         crm_stage.py, crm_lead.py, mail_thread.py
+          crm_stage.py, crm_lead.py
+  migrations/20.0.1.2.0/post-migrate.py
   security/ir.access.csv
   views/crm_pipeline_category_views.xml, crm_stage_views.xml, crm_lead_views.xml
   tests/test_pipeline_categories.py
@@ -189,8 +194,8 @@ The browser runner is not imported by `tests/__init__.py`; normal Odoo test
 loading does not require Playwright.
 
 The base add-on depends only on `crm` and ships no custom frontend assets. The
-optional website companion add-on supplies the small category-list script for its
-public form. Native form, quick-create, list, search, Kanban and stage views are
+retired website module retains only a small copied-form deactivation guard.
+Native form, quick-create, list, search, Kanban and stage views are
 inherited, preserving Enterprise view types and native actions rather than copying
 them.
 
@@ -201,7 +206,8 @@ does not depend on that consumer or the later generic dropdown module.
 
 ## 5. Reproducing local checks
 
-Commands below run from this repository root. Use the recorded sibling checkouts
+Commands below test the compatibility layer as well as the core; new deployments
+should install only the core module. Run from this repository root. Use the recorded sibling checkouts
 and a disposable PostgreSQL 16+ database. Supply `ODOO_DB_PASSWORD` separately;
 do not commit local credentials. Stop a server before updating **its** database.
 
@@ -225,14 +231,14 @@ The Odoo virtual environment uses Python 3.12, `../odoo/requirements.txt`,
 
 The browser runner uses a **separate** Python environment containing
 `playwright==1.65.0` and its installed Chromium (`python -m playwright install
-chromium`). Start the installed dev database on loopback port 18020, then:
+chromium`). Start the installed test database on loopback port 18027, then:
 
 ```bash
 ODOO_E2E_ALLOW_WRITES=1 \
-ODOO_E2E_URL=http://127.0.0.1:18020 \
-ODOO_E2E_DATABASE=kpability_pipeline_dev \
+ODOO_E2E_URL=http://127.0.0.1:18027 \
+ODOO_E2E_DATABASE=kpability_pipeline_defer_fresh \
 ODOO_E2E_LOGIN=admin ODOO_E2E_PASSWORD="$ODOO_BROWSER_PASSWORD" \
-  uv run --with playwright==1.65.0 python \
+  uv run --no-project --with playwright==1.65.0 python \
     kpability_pipeline_categories/tests/e2e/test_pipeline_categories.py
 ```
 
@@ -243,10 +249,14 @@ dataset for inspection; never use client data. Screenshots, named videos and
 `dataset.json` go under `/tmp/opencode/kpability-pipeline-e2e/<run_id>/` (override
 the base directory with `ODOO_E2E_ARTIFACTS`). Do not run concurrent suites on the
 same database.
-When the website companion is installed, the browser suite also creates a
-synthetic published form page and submits it as a public visitor to two pipelines.
+When the retired website module is installed, the browser suite also checks that
+a synthetic legacy copied form is disabled and the old category endpoint is gone.
 
-## 6. Executed results, November 12, 2026
+## 6. Historical results, November 12, 2026 (before deferral)
+
+The following results describe PR #4, **not** the current CRM-only release.
+PC-13/PC-14 and their website screenshots are historical and deferred under
+issue #6. Current cleanup verification is recorded separately below.
 
 | Check | Actual result / evidence |
 | --- | --- |
@@ -298,7 +308,51 @@ Curated [visual evidence](evidence/README.md) is retained in
 the repository; full raw artifacts remain local. All PC cases are **not** marked
 release-complete: the remaining column and independent review still apply.
 
-## 7. Integration, rollout and outstanding gates
+## 7. Current deferral verification, November 13, 2026
+
+The cleanup is based on merged PR #4 (`cf54708dd35761c9a3e09d27a0bb2aa711f4b378`).
+It removes the custom website/email delivery while keeping core CRM behavior.
+The retired companion remains only because existing installations must be able
+to upgrade without dropping their configuration. Issue #6 stays open for the
+future separately reviewed integrations.
+
+| Check | Actual result |
+| --- | --- |
+| Fresh core-only Enterprise install | **47 passed**: 45 feature tests plus 2 native web tests; no failures/errors or warnings; `kpability_pipeline_defer_core`, `/tmp/opencode/kpability-defer-core-fresh.log` |
+| Combined core/retired-companion regression | **53 passed**: 45 core and 8 compatibility tests; no failures/errors; `/tmp/opencode/kpability-defer-tests.log` |
+| First upgrade from PR #4's installed versions | **53 passed**, no failures/errors or warnings; migration actually executed; `kpability_pipeline_defer_upgrade_final`, `/tmp/opencode/kpability-defer-upgrade-final.log` |
+| Browser | **12 passed** in **17.975s**, run `1113013907`; existing ten CRM cases plus no intake tabs and a disabled copied website form |
+| Static checks | Ruff E9/F, Python/XML parsing, relative documentation links and whitespace checks passed |
+
+The upgrade fixture started with base `20.0.1.1.0` and website `20.0.1.0.0`,
+then updated to `20.0.1.2.0` and `20.0.1.1.0`. Before/after snapshots verified:
+
+- Both classified opportunities, including an archived Lost record, retained
+  their name, category, stage, company, team, probability, revenue and audit date.
+- All 2 categories, 4 stages, 6 website pages and their stored mappings/configuration
+  were retained without changes; the legacy email configuration row was retained.
+- All 4 native aliases were retained. Only the one owned pipeline alias was
+  disabled; unrelated aliases and defaults stayed unchanged.
+- The exact native alias name was archived even when it differed from the
+  historical wrapper name. Re-running retirement caused no further writes.
+- The old editor snippet and category inheritance view became inactive; the old
+  template XML ID still resolves but no longer contains a form.
+
+The alias's computed display label intentionally becomes **Inactive Alias**;
+its stored relation ID is unchanged. The compatibility tests additionally verify
+that stale checkbox/list submissions create no opportunities or attachments,
+the public category endpoint returns 404, and ordinary native email/replies and
+website CRM forms continue to work.
+
+Current [two-screenshot evidence](evidence/intake-deferral-2026-11-13/README.md)
+shows the category form without intake tabs and the working scoped pipeline.
+Raw browser artifacts remain in `/tmp/opencode/kpability-pipeline-e2e/1113013907/`.
+These checks used isolated local Enterprise databases, not the Odoo.sh database.
+They are not a production rollback exercise, external email-delivery certification
+or independent checker approval. Earlier PC-13/PC-14 success evidence is historical,
+not a feature offered by this cleanup.
+
+## 8. Integration, rollout and outstanding gates
 
 1. Confirm checker/access-owner review and reproduce the outstanding case evidence
    above; attach case-linked screenshots or recording when a PR is authorized.
@@ -315,7 +369,7 @@ release-complete: the remaining column and independent review still apply.
    tested matching restore for rollback, not a code-only checkout after schema
     changes. Production approval is separate from this local implementation.
 
-For the leader's follow-up, the supplied
+Historical note from the November 12 review: the supplied
 [development CRM URL](https://kpability-kpability-workspace-management-feature-pi-41756670.dev.odoo.com/odoo/action-272)
 redirected to login. The public `/kpability/pipeline-categories` endpoint returned
 `[]`. No remote form submission, configuration change or email was attempted;
