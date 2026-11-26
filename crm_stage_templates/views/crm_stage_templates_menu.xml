@@ -2,48 +2,9 @@
     <menuitem
             id="menu_crm_stage_templates_root"
             name="Stage Templates"
-            parent="crm.menu_crm_config_lead"
-            groups="sales_team.group_sale_manager"
-            sequence="5"
-    />
-
-    <menuitem
-            id="menu_crm_stage_templates"
-            name="By Stage"
-            parent="menu_crm_stage_templates_root"
+            parent="crm.crm_menu_config"
             action="crm_stage_template_action"
-            sequence="10"
-    />
-
-    <menuitem
-            id="menu_crm_stage_templates_activity_plans"
-            name="Activity Plans"
-            parent="menu_crm_stage_templates_root"
-            action="crm.mail_activity_plan_action_lead"
-            sequence="20"
-    />
-
-    <record id="action_crm_stage_templates_email" model="ir.actions.act_window">
-        <field name="name">Email Templates</field>
-        <field name="res_model">mail.template</field>
-        <field name="view_mode">list,form</field>
-        <field name="domain">[('model', '=', 'crm.lead')]</field>
-        <field name="context">{'default_model': 'crm.lead'}</field>
-    </record>
-
-    <menuitem
-            id="menu_crm_stage_templates_email"
-            name="Email Templates"
-            parent="menu_crm_stage_templates_root"
-            action="action_crm_stage_templates_email"
-            sequence="30"
-    />
-
-    <menuitem
-            id="menu_crm_stage_templates_stages"
-            name="Stages"
-            parent="menu_crm_stage_templates_root"
-            action="crm.crm_stage_action"
-            sequence="40"
+            groups="sales_team.group_sale_manager"
+            sequence="34"
     />
 </odoo>

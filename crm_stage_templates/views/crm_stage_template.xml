@@ -21,6 +21,11 @@
                 <field name="stage_id"/>
                 <field name="activity_plan_ids" widget="many2many_tags"/>
                 <field name="mail_template_ids" widget="many2many_tags"/>
+                <field
+                        name="s_domain"
+                        widget="domain"
+                        options="{'model': 'crm.lead', 'in_dialog': True, 'foldable': True}"
+                />
                 <field name="n_activity_plan_count" string="Activities"/>
                 <field name="n_mail_template_count" string="Emails"/>
             </list>
@@ -43,6 +48,13 @@
                         <group>
                             <field name="n_sequence"/>
                             <field name="active" invisible="1"/>
+                        </group>
+                        <group>
+                            <field
+                                    name="s_domain"
+                                    widget="domain"
+                                    options="{'model': 'crm.lead', 'in_dialog': True, 'foldable': True}"
+                            />
                         </group>
                     </group>
                     <notebook>
@@ -69,13 +81,6 @@
                                 </list>
                             </field>
                         </page>
-                        <page string="Stage Rules" name="stage_rules">
-                            <field
-                                    name="s_stage_rules"
-                                    placeholder="Describe visible / enabled / required rules for this stage..."
-                                    nolabel="1"
-                            />
-                        </page>
                     </notebook>
                 </sheet>
             </form>
@@ -91,8 +96,8 @@
                 Create a Stage Template
             </p>
             <p>
-                Centralize activity plans, email templates, and stage-rule notes
-                for each CRM pipeline stage.
+                Centralize activity plans and email templates for each CRM pipeline
+                stage. Optional Condition must match before activities or emails run.
             </p>
         </field>
     </record>

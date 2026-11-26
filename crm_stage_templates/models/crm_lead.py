@@ -8,6 +8,17 @@ _logger = logging.getLogger(__name__)
 class CrmLead(models.Model):
     _inherit = "crm.lead"
 
+    stage_template_applied_stage_ids = fields.Many2many(
+        "crm.stage",
+        "crm_lead_stage_template_applied_rel",
+        "lead_id",
+        "stage_id",
+        string="Stage Templates Applied",
+        copy=False,
+        help="Stages where activity plans / emails from Stage Templates "
+             "have already been applied for this lead.",
+    )
+
     @api.model_create_multi
     def create(self, vals_list):
         leads = super().create(vals_list)
@@ -41,13 +52,21 @@ class CrmLead(models.Model):
             ])
         }
         for lead in self:
-            template = templates_by_stage.get(lead.stage_id.id)
+            stage = lead.stage_id
+            template = templates_by_stage.get(stage.id)
             if not template:
+                continue
+            if stage in lead.stage_template_applied_stage_ids:
+                continue
+            if not template._matches_domain(lead):
                 continue
             for plan in template.activity_plan_ids:
                 lead._apply_stage_template_activity_plan(plan)
             for mail_template in template.mail_template_ids:
                 lead._apply_stage_template_email(mail_template)
+            lead.sudo().with_context(skip_crm_stage_templates=True).write({
+                "stage_template_applied_stage_ids": [fields.Command.link(stage.id)],
+            })
 
     def _apply_stage_template_activity_plan(self, plan):
         self.ensure_one()
