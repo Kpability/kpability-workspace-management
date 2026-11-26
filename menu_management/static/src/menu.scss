@@ -1,0 +1,21 @@
+.o_workspace_menu {
+    .o_role {
+        position: sticky;
+        left: 0;
+        z-index: 1;
+        min-width: 18rem;
+    }
+    thead th {
+        position: sticky;
+        top: 0;
+        z-index: 2;
+        vertical-align: bottom;
+        font-weight: 500;
+        &.o_role { z-index: 3; }
+    }
+    .o_app {
+        min-width: 8rem;
+        img { width: 2rem; height: 2rem; margin-bottom: .5rem; }
+    }
+    th, td { padding: 1rem .5rem; }
+}

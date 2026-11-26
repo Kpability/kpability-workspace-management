@@ -1,0 +1,37 @@
+<templates xml:space="preserve">
+    <t t-name="menu_management.Menu">
+        <div class="o_action o_workspace_menu">
+            <Layout display="{ controlPanel: {} }">
+                <div class="h-100 overflow-auto">
+                    <table class="table mb-0">
+                        <thead>
+                            <tr>
+                                <th class="o_role bg-view"/>
+                                <th t-foreach="this.state.menus" t-as="menu" t-key="menu.id" class="o_app bg-view text-center">
+                                    <img t-att-src="this.icon(menu)" alt=""/>
+                                    <div t-out="menu.name"/>
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr t-foreach="this.state.roles" t-as="role" t-key="role.id">
+                                <th class="o_role bg-view text-nowrap">
+                                    <div t-out="role.name"/>
+                                    <div class="d-flex gap-2 mt-1">
+                                        <button class="btn btn-link btn-sm p-0" t-att-disabled="this.state.saving" t-on-click="() => this.save(role, this.state.menus, true)">Select all</button>
+                                        <button class="btn btn-link btn-sm p-0" t-att-disabled="this.state.saving" t-on-click="() => this.save(role, this.state.menus, false)">Unselect all</button>
+                                    </div>
+                                </th>
+                                <td t-foreach="this.state.menus" t-as="menu" t-key="menu.id" class="text-center align-middle">
+                                    <CheckBox className="'d-inline-block me-0'" value="this.checked(role, menu)"
+                                              disabled="this.state.saving" ariaLabel="role.name + ': ' + menu.name"
+                                              onChange="(enabled) => this.save(role, [menu], enabled)"/>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </Layout>
+        </div>
+    </t>
+</templates>
