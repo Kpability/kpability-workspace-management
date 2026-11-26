@@ -27,16 +27,9 @@ class CrmLead(models.Model):
         return leads
 
     def write(self, vals):
-        stage_before = (
-            {lead.id: lead.stage_id.id for lead in self}
-            if "stage_id" in vals
-            else {}
-        )
+        stage_before = {lead.id: lead.stage_id.id for lead in self}
         res = super().write(vals)
-        if (
-            "stage_id" in vals
-            and not self.env.context.get("skip_crm_stage_templates")
-        ):
+        if not self.env.context.get("skip_crm_stage_templates"):
             changed = self.filtered(
                 lambda lead: stage_before.get(lead.id) != lead.stage_id.id
             )
@@ -45,12 +38,13 @@ class CrmLead(models.Model):
 
     def _apply_stage_templates(self):
         StageTemplate = self.env["crm.stage.template"].sudo()
-        templates_by_stage = {
-            template.stage_id.id: template
-            for template in StageTemplate.search([
-                ("stage_id", "in", self.stage_id.ids),
-            ])
-        }
+        # Prefer the oldest template if legacy duplicates exist for a stage.
+        templates_by_stage = {}
+        for template in StageTemplate.search(
+            [("stage_id", "in", self.stage_id.ids)],
+            order="id",
+        ):
+            templates_by_stage.setdefault(template.stage_id.id, template)
         for lead in self:
             stage = lead.stage_id
             template = templates_by_stage.get(stage.id)
