@@ -290,6 +290,73 @@ class SalesTeamPipelineBrowserTests(unittest.TestCase):
         expect(self.page.get_by_role("button", name="New", exact=True)).to_have_count(0)
         expect(self.page.locator(".o_list_record_selector")).to_have_count(0)
 
+    def test_08_mapping_companyless_team_requires_shared_category(self):
+        category_model = "crm.pipeline.category"
+        category_name = f"Company Scope {self.run_id[-6:]}"
+        team_name = f"Sales (no company) {self.run_id[-6:]}"
+        company_name = self.call("res.company", "read", [[self.company], ["name"]])[0]["name"]
+        category, = self.call(category_model, "create", [[{
+            "s_name": category_name, "company_id": self.company,
+            "stage_ids": [[6, 0, [self.stage, self.won]]],
+        }]])
+        team, = self.call("crm.team", "create", [[{"name": team_name, "company_id": False}]])
+        teams = self.page.locator("[name='sales_team_ids']")
+        company = self.page.locator("[name='company_id'] input")
+        save = self.page.get_by_role("button", name="Save manually", exact=True)
+
+        def search_excludes(input_field, name):
+            def matches(response):
+                return (
+                    response.url.endswith("/web_name_search")
+                    and response.request.post_data_json["params"]["kwargs"].get("name") == name
+                )
+
+            with self.page.expect_response(matches) as search:
+                input_field.fill(name)
+            self.assertEqual(search.value.json()["result"], [])
+            expect(self.page.get_by_role("option", name=name, exact=True)).to_have_count(0)
+
+        def read_mapping():
+            return self.call(category_model, "read", [[category], ["company_id", "sales_team_ids"]])[0]
+
+        self.open_record(category_model, category)
+        expect(company).to_have_value(company_name)
+        search_excludes(teams.locator("input"), team_name)
+        expect(self.page.get_by_text("No records", exact=True)).to_be_visible()
+        self.page.screenshot(path=self.output / "STPC01-company-scope-excluded.png", animations="disabled")
+
+        self.open_record("crm.team", team)
+        self.page.get_by_role("tab", name="Pipeline Categories", exact=True).click()
+        categories = self.page.locator("[name='pipeline_category_ids']")
+        search_excludes(categories.locator("input"), category_name)
+
+        self.open_record(category_model, category)
+        company.press("Control+a")
+        company.press("Backspace")
+        self.page.get_by_role("heading", name=category_name).click()
+        expect(company).to_have_value("")
+        teams.locator("input").fill(team_name)
+        self.page.get_by_role("option", name=team_name, exact=True).click()
+        save.click()
+        self.wait_for(lambda: read_mapping()["sales_team_ids"] == [team], "shared category mapping")
+        saved = read_mapping()
+        self.assertIs(saved["company_id"], False)
+
+        self.open_record("crm.team", team)
+        self.page.get_by_role("tab", name="Pipeline Categories", exact=True).click()
+        expect(categories).to_contain_text(category_name)
+        self.open_record(category_model, category)
+        expect(company).to_have_value("")
+        expect(teams).to_contain_text(team_name)
+        self.page.screenshot(path=self.output / "STPC01-company-scope-shared.png", animations="disabled")
+
+        company.fill(company_name)
+        self.page.get_by_role("option", name=company_name, exact=True).click()
+        save.click()
+        expect(self.page.get_by_role("dialog")).to_contain_text("incompatible with existing sales-team mappings")
+        self.assertEqual(read_mapping(), saved)
+        self.page.screenshot(path=self.output / "STPC01-company-scope-rejected.png", animations="disabled")
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
