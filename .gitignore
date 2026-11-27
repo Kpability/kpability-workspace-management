@@ -1,3 +1,5 @@
+*.conf
+.data/
 __pycache__/
-*.py[cod]
-.pytest_cache/
+*.pyc
+secrets/
