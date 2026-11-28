@@ -1,0 +1,34 @@
+{
+  "server_version": "20.0+e",
+  "browser": "158.0.8127.18",
+  "database": "kpability_pipeline_stpc_final_1534c71",
+  "debug_assets": true,
+  "modules": {
+    "crm_enterprise": "20.0.1.0",
+    "crm_stage_reasons": "20.0.1.0.0",
+    "kpability_pipeline_categories": "20.0.1.2.0",
+    "kpability_sales_team_pipeline_categories": "20.0.1.0.0",
+    "kpability_website_pipeline_categories": "20.0.1.1.0",
+    "web_enterprise": "20.0.1.0"
+  },
+  "run_id": "20261124080609",
+  "teams": [
+    20,
+    21
+  ],
+  "categories": [
+    31,
+    32,
+    33
+  ],
+  "lead": 198,
+  "cases": [
+    "test_01_native_team_configuration_and_category_mapping",
+    "test_02_category_dropdown_intersects_team_mapping",
+    "test_03_dirty_form_discard_and_explicit_reclassification",
+    "test_04_invalid_save_and_rpc_are_atomic",
+    "test_05_category_scoped_quick_create_exposes_team",
+    "test_06_sales_mapping_is_read_only_and_backend_denies_edits",
+    "test_07_compatibility_report_is_read_only"
+  ]
+}

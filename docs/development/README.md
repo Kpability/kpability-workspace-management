@@ -2,7 +2,7 @@
 
 **Prepared:** November 10, 2026 · **Implementation started:** November 11, 2026 · **Developer:** Fyke
 
-These documents describe reusable Odoo 20 modules. Pipeline Categories is now implemented on this branch; see its [implementation and verification record](../../kpability_pipeline_categories/docs/pipeline-categories.md) for local Odoo 20 Enterprise results and outstanding release gates. Other feature documents remain plans. Planning itself did not certify any module.
+These documents describe reusable Odoo 20 modules. Pipeline Categories and the Sales Team Pipeline Categories foundation are implemented on this branch; see their [category](../../kpability_pipeline_categories/docs/pipeline-categories.md) and [team](../../kpability_sales_team_pipeline_categories/docs/sales-team-pipeline-categories.md) implementation records for actual verification and outstanding gates. Website/email reintroduction is pending PR #7's approved merge through `20`. Other feature documents remain plans. Planning itself did not certify any module.
 
 ## One branch per module
 
@@ -11,7 +11,7 @@ Each feature branch contains its own plan plus the same shared standards and PR 
 | Local branch | Plan path | Source target date |
 | --- | --- | --- |
 | `feature/pipeline-categories` | `kpability_pipeline_categories/docs/pipeline-categories.md` | November 13, 2026 |
-| `feature/sales-team-pipeline-categories` | `docs/development/sales-team-pipeline-categories.md` | November 13, 2026 |
+| `feature/sales-team-pipeline-categories` | `kpability_sales_team_pipeline_categories/docs/sales-team-pipeline-categories.md` | November 13, 2026 |
 | `feature/stage-rules` | `docs/development/stage-rules.md` | November 23, 2026 |
 | `feature/dependent-dropdown-filters` | `docs/development/dependent-dropdown-filters.md` | November 17, 2026 |
 
@@ -33,7 +33,7 @@ base/web -> stage-rule engine -> CRM adapter -> pipeline categories (if category
 approved shared Save/Discard module -> stage-rule UX integration
 ```
 
-Arrows mean prerequisite to consumer. The category add-on now depends only on `crm`; other arrows remain proposed. Business workflows must still work with each optional engine absent.
+Arrows mean prerequisite to consumer. The category add-on depends only on `crm`, and the team consumer depends only on the category add-on; other arrows remain proposed. Business workflows must still work with each optional engine absent.
 
 The category and team branches remain independent local branches. During implementation, land the category dependency into the agreed integration base before updating the team branch; do not silently make a PR depend on unreviewed sibling-branch commits.
 
@@ -42,5 +42,5 @@ The category and team branches remain independent local branches. During impleme
 - Source assignments and dates are recorded, not newly promised delivery commitments.
 - Suggested architecture, field names, edge-case defaults, and daily milestones require reviewer approval.
 - Odoo 20 is the requested target. Availability of a branch named `20` is not proof of runtime or API compatibility.
-- The initial planning checkout contained IDE metadata only. This branch now includes PR #1's `workspace_management` and the standalone `kpability_pipeline_categories` add-on. The Odoo server and Enterprise sources are sibling checkouts, not vendored into this repository.
+- The initial planning checkout contained IDE metadata only. This branch now includes PR #1's `workspace_management`, the standalone `kpability_pipeline_categories` add-on and its optional `kpability_sales_team_pipeline_categories` consumer. The Odoo server and Enterprise sources are sibling checkouts, not vendored into this repository.
 - Do not create a release, configure Odoo.sh, add real submodules, open a PR, or push these planning changes without separate authorization.
